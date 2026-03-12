@@ -1,180 +1,177 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
-import { Upload, Loader2, ArrowLeft, Tag, MapPin, Info, Camera, X } from "lucide-react";
-import Link from "next/link";
+import { createBrowserClient } from '@supabase/ssr';
+import { useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
 
-const supabaseUrl = "https://ebcbdgordzueljtplwpe.supabase.co";
-const supabaseAnonKey = "sb_publishable_VLaJtPU_k4lM8A22iyCX9w_l21d4o8K";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const CATEGORIES = [
-  "財布・現金", "スマートフォン・携帯", "鍵", "衣類・傘", 
-  "バック・ポーチ", "アクセサリー・貴金属", "書類・カード", "その他"
-];
+// カテゴリーのマスターデータ（必要に応じて後から追加・修正が可能）
+const CATEGORY_TREE: Record<string, Record<string, string[]>> = {
+  "現金": {
+    "現金": ["紙幣のみ", "硬貨のみ", "混在", "外貨"]
+  },
+  "かばん類": {
+    "ビジネスバッグ": ["アタッシュケース", "ブリーフケース", "その他"],
+    "ハンドバッグ": ["革製", "布製", "その他"],
+    "リュックサック": ["登山用", "タウンユース", "その他"]
+  },
+  "財布類": {
+    "長財布": ["革製", "布製", "その他"],
+    "折り財布": ["二つ折り", "三つ折り", "その他"],
+    "小銭入れ": ["がま口", "ファスナー", "その他"]
+  },
+  "カメラ類": {
+    "デジタルカメラ": ["一眼レフ", "コンパクト", "ミラーレス"],
+    "ビデオカメラ": ["家庭用", "アクションカメラ", "その他"]
+  },
+  "その他": {
+    "その他": ["その他"]
+  }
+};
 
 export default function NewItemPage() {
   const router = useRouter();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const [loading, setLoading] = useState(false);
-  
-  // 型定義を明示的に指定してエラーを回避
-  const [files, setFiles] = useState<(File | null)[]>([null, null, null, null, null]);
-  const [previews, setPreviews] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0] || null;
-    if (selectedFile) {
-      const newFiles = [...files];
-      newFiles[index] = selectedFile;
-      setFiles(newFiles);
+  // フォームステート
+  const [managementNumber, setManagementNumber] = useState('');
+  const [name, setName] = useState('');
+  const [foundAt, setFoundAt] = useState('');
+  const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [facePhotoUrl, setFacePhotoUrl] = useState('');
 
-      const url = URL.createObjectURL(selectedFile);
-      const newPreviews = [...previews];
-      newPreviews[index] = url;
-      setPreviews(newPreviews);
-    }
-  };
+  // カテゴリー用ステート
+  const [mainCategory, setMainCategory] = useState('');
+  const [subCategory, setSubCategory] = useState('');
+  const [itemType, setItemType] = useState('');
 
-  const removeFile = (index: number) => {
-    // メモリリーク防止のためオブジェクトURLを解放
-    if (previews[index]) {
-      URL.revokeObjectURL(previews[index]!);
-    }
+  // 選択肢の動的生成
+  const mainCategories = Object.keys(CATEGORY_TREE);
+  const subCategories = useMemo(() => {
+    return mainCategory ? Object.keys(CATEGORY_TREE[mainCategory]) : [];
+  }, [mainCategory]);
+  const itemTypes = useMemo(() => {
+    return mainCategory && subCategory ? CATEGORY_TREE[mainCategory][subCategory] : [];
+  }, [mainCategory, subCategory]);
 
-    const newFiles = [...files];
-    newFiles[index] = null;
-    setFiles(newFiles);
-
-    const newPreviews = [...previews];
-    newPreviews[index] = null;
-    setPreviews(newPreviews);
-  };
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
 
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const category = formData.get("category") as string;
-    const location = formData.get("location") as string;
-    const description = formData.get("description") as string;
-
-    try {
-      const uploadedUrls: string[] = [];
-
-      for (const file of files) {
-        if (file) {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from("lost_items")
-            .upload(fileName, file);
-
-          if (uploadError) throw uploadError;
-
-          const { data: urlData } = supabase.storage
-            .from("lost_items")
-            .getPublicUrl(fileName);
-          
-          uploadedUrls.push(urlData.publicUrl);
-        }
-      }
-
-      const { error: dbError } = await supabase
-        .from("lost_items")
-        .insert([{
-          name,
-          category,
-          location,
-          description,
-          photo_url: uploadedUrls[0] || "",
-          status: "保管中",
-          management_number: `L-${Date.now().toString().slice(-6)}`,
-          found_at: new Date().toISOString()
-        }]);
-
-      if (dbError) throw dbError;
-
-      router.push("/");
-      router.refresh();
-    } catch (error: any) {
-      alert(`登録エラー: ${error.message}`);
-    } finally {
-      setLoading(false);
+    // ユーザー認証確認
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push('/login');
+      return;
     }
-  }
 
-  const labelStyle: React.CSSProperties = { fontSize: "14px", fontWeight: "800", color: "#475569", display: "flex", alignItems: "center", gap: "6px" };
-  const inputStyle: React.CSSProperties = { padding: "12px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "16px", outline: "none", backgroundColor: "#fff" };
+    // カテゴリーの結合（例: "かばん類 / ビジネスバッグ / アタッシュケース"）
+    const combinedCategory = `${mainCategory} / ${subCategory} / ${itemType}`;
+
+    // データベースへの挿入
+    const { error } = await supabase.from('lost_items').insert([
+      {
+        management_number: managementNumber,
+        name: name,
+        status: '保管中', // 初期ステータスを固定
+        found_at: new Date(foundAt).toISOString(),
+        category: combinedCategory,
+        location: location,
+        description: description,
+        photo_url: photoUrl || null,
+        face_photo_url: facePhotoUrl || null,
+        user_id: user.id
+      }
+    ]);
+
+    if (error) {
+      setErrorMsg('登録に失敗しました: ' + error.message);
+      setLoading(false);
+    } else {
+      router.push('/');
+      router.refresh();
+    }
+  };
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc", padding: "40px 20px", fontFamily: "sans-serif" }}>
-      <div style={{ maxWidth: "640px", margin: "0 auto" }}>
-        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#64748b", textDecoration: "none", marginBottom: "20px", fontSize: "14px", fontWeight: "bold" }}>
-          <ArrowLeft size={16} /> ダッシュボードに戻る
-        </Link>
+    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>拾得物 新規登録</h1>
+          <button onClick={() => router.push('/')} style={{ padding: '8px 16px', cursor: 'pointer', border: '1px solid #ccc', backgroundColor: 'white', borderRadius: '6px' }}>キャンセル</button>
+        </div>
 
-        <div style={{ backgroundColor: "#fff", padding: "40px", borderRadius: "24px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)", border: "1px solid #e2e8f0" }}>
-          <h1 style={{ fontSize: "24px", fontWeight: "900", color: "#0f172a", marginBottom: "32px", textAlign: "center" }}>拾得アイテム登録</h1>
+        {errorMsg && <div style={{ backgroundColor: '#fff1f0', color: '#f5222d', padding: '10px', borderRadius: '6px', marginBottom: '20px' }}>{errorMsg}</div>}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <label style={labelStyle}><Tag size={16} /> 品名 <span style={{ color: "#ef4444", fontSize: "10px" }}>[必須]</span></label>
-              <input name="name" required style={inputStyle} placeholder="例：黒色の長財布" />
-            </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>管理番号 *</label>
+            <input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <label style={labelStyle}><Info size={16} /> カテゴリー</label>
-              <select name="category" style={inputStyle}>
-                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>品名（名称） *</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
+
+          <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', fontSize: '0.9rem', color: '#0070f3' }}>詳細カテゴリー分類 *</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <select value={mainCategory} onChange={(e) => { setMainCategory(e.target.value); setSubCategory(''); setItemType(''); }} required style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+                <option value="">大分類を選択</option>
+                {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+
+              <select value={subCategory} onChange={(e) => { setSubCategory(e.target.value); setItemType(''); }} required disabled={!mainCategory} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: !mainCategory ? '#eee' : 'white' }}>
+                <option value="">中分類を選択</option>
+                {subCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+
+              <select value={itemType} onChange={(e) => setItemType(e.target.value)} required disabled={!subCategory} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: !subCategory ? '#eee' : 'white' }}>
+                <option value="">小分類を選択</option>
+                {itemTypes.map(type => <option key={type} value={type}>{type}</option>)}
               </select>
             </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <label style={labelStyle}><MapPin size={16} /> 拾得場所 <span style={{ color: "#ef4444", fontSize: "10px" }}>[必須]</span></label>
-              <input name="location" required style={inputStyle} placeholder="例：3F ラウンジ" />
-            </div>
+          </div>
 
-            {/* 写真アップロードエリア */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <label style={labelStyle}><Camera size={16} /> 写真 (最大5枚)</label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px" }}>
-                {previews.map((previewUrl, index) => (
-                  <div key={index} style={{ position: "relative", aspectRatio: "1/1", border: "2px dashed #e2e8f0", borderRadius: "8px", overflow: "hidden", backgroundColor: "#fcfcfd" }}>
-                    {previewUrl ? (
-                      <div style={{ position: "relative", width: "100%", height: "100%" }}>
-                        <img src={previewUrl} alt={`preview ${index}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        <button type="button" onClick={() => removeFile(index)} style={{ position: "absolute", top: "2px", right: "2px", backgroundColor: "rgba(0,0,0,0.6)", color: "white", border: "none", borderRadius: "50%", width: "18px", height: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ) : (
-                      <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", cursor: "pointer" }}>
-                        <Upload size={16} color="#94a3b8" />
-                        <span style={{ fontSize: "8px", color: "#94a3b8", marginTop: "4px" }}>{index + 1}枚目</span>
-                        <input type="file" accept="image/*" onChange={(e) => handleFileChange(index, e)} style={{ display: "none" }} />
-                      </label>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>拾得日時 *</label>
+            <input type="datetime-local" value={foundAt} onChange={(e) => setFoundAt(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <label style={labelStyle}><Info size={16} /> 特徴・詳細説明</label>
-              <textarea name="description" rows={3} style={{ ...inputStyle, resize: "none" }} placeholder="色、傷、中身の詳細など" />
-            </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>拾得場所 *</label>
+            <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
 
-            <button type="submit" disabled={loading} style={{ marginTop: "10px", padding: "18px", backgroundColor: "#2563eb", color: "#fff", border: "none", borderRadius: "14px", fontWeight: "900", fontSize: "16px", cursor: loading ? "not-allowed" : "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.3)" }}>
-              {loading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
-              {loading ? "アップロード中..." : "アイテムを登録する"}
-            </button>
-          </form>
-        </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>全体写真URL（任意）</label>
+            <input type="url" placeholder="https://..." value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>特徴写真URL（任意）</label>
+            <input type="url" placeholder="https://..." value={facePhotoUrl} onChange={(e) => setFacePhotoUrl(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>詳細説明・メモ（任意）</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', resize: 'vertical' }} />
+          </div>
+
+          <button type="submit" disabled={loading} style={{ backgroundColor: '#0070f3', color: 'white', padding: '15px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '1.1rem', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '10px' }}>
+            {loading ? '登録中...' : 'この内容で登録する'}
+          </button>
+        </form>
       </div>
     </div>
   );
