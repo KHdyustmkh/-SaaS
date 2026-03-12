@@ -1,13 +1,12 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
   const supabase = createBrowserClient(
@@ -16,129 +15,131 @@ export default function DashboardPage() {
   );
 
   useEffect(() => {
-    const checkUserAndFetchData = async () => {
+    const fetchItems = async () => {
+      // ログインチェック
       const { data: { user } } = await supabase.auth.getUser();
-
       if (!user) {
         router.push('/login');
         return;
       }
-      setUser(user);
 
+      // データの取得（最新順）
       const { data, error } = await supabase
         .from('lost_items')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!error) {
+      if (error) {
+        console.error('データ取得エラー:', error);
+      } else {
         setItems(data || []);
       }
       setLoading(false);
     };
 
-    checkUserAndFetchData();
+    fetchItems();
   }, [supabase, router]);
 
-  if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
-      <p>データを読み込み中...</p>
-    </div>
-  );
+  if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>読み込み中...</div>;
 
   return (
-    <div style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      {/* ヘッダー */}
-      <header style={{ backgroundColor: 'white', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <h1 style={{ fontSize: '1.25rem', color: '#333', margin: 0 }}>拾得物管理ダッシュボード</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '0.9rem', color: '#666' }}>{user?.email}</span>
-          <button 
-            onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }}
-            style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer', backgroundColor: 'white' }}
-          >
-            ログアウト
-          </button>
-        </div>
-      </header>
-
-      <main style={{ padding: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.5rem', margin: 0 }}>管理中のアイテム ({items.length})</h2>
-          {/* 今後ここをクリックして登録ページへ飛ぶように設定します */}
+    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        
+        {/* ヘッダーエリア */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+          <div>
+            <h1 style={{ fontSize: '1.8rem', margin: 0, color: '#1d1d1f' }}>拾得物管理ダッシュボード</h1>
+            <p style={{ color: '#86868b', margin: '5px 0 0' }}>現在 {items.length} 件のアイテムが登録されています</p>
+          </div>
           <button 
             onClick={() => router.push('/items/new')}
-            style={{ backgroundColor: '#0070f3', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+            style={{ backgroundColor: '#0070f3', color: 'white', padding: '12px 24px', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' }}
           >
-            ＋ 新規登録
+            + 新規アイテム登録
           </button>
         </div>
 
-        {/* カードグリッド */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-          gap: '1.5rem' 
-        }}>
-          {items.map((item) => (
-            <div 
-              key={item.id} 
-              style={{ 
-                backgroundColor: 'white', 
-                borderRadius: '12px', 
-                overflow: 'hidden', 
-                boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-                transition: 'transform 0.2s',
-                cursor: 'pointer',
-                border: '1px solid #eee'
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-5px)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-              /* 修正ポイント: クリックで詳細ページへ遷移 */
-              onClick={() => router.push(`/items/${item.id}`)}
-            >
-              {/* 画像エリア */}
-              <div style={{ height: '180px', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {item.photo_url ? (
-                  <img src={item.photo_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ color: '#999' }}>No Image</span>
-                )}
-              </div>
-
-              {/* コンテンツエリア */}
-              <div style={{ padding: '1.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                  <span style={{ 
-                    fontSize: '0.75rem', 
-                    padding: '4px 8px', 
-                    borderRadius: '4px', 
-                    backgroundColor: item.status === '保管中' ? '#e6f7ff' : '#fff1f0',
-                    color: item.status === '保管中' ? '#1890ff' : '#f5222d',
-                    fontWeight: 'bold'
-                  }}>
-                    {item.status}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: '#999' }}>#{item.management_number}</span>
-                </div>
-                <h3 style={{ fontSize: '1.1rem', margin: '0 0 0.5rem 0', color: '#222' }}>{item.name}</h3>
-                <p style={{ fontSize: '0.85rem', color: '#666', margin: '0 0 1rem 0' }}>
-                  場所: {item.location}<br />
-                  日時: {new Date(item.found_at).toLocaleDateString()}
-                </p>
-                <div style={{ borderTop: '1px solid #eee', paddingTop: '1rem', fontSize: '0.8rem', color: '#888' }}>
-                  カテゴリ: {item.category}
-                </div>
-              </div>
+        {/* リストエリア */}
+        <div style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f9f9fb', borderBottom: '1px solid #eee' }}>
+                <th style={thStyle}>管理番号</th>
+                <th style={thStyle}>画像</th>
+                <th style={thStyle}>品名</th>
+                <th style={thStyle}>カテゴリー（大/中/種）</th>
+                <th style={thStyle}>ステータス</th>
+                <th style={thStyle}>拾得場所</th>
+                <th style={thStyle}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0', transition: '0.2s' }}>
+                  <td style={tdStyle}>{item.management_number}</td>
+                  <td style={tdStyle}>
+                    {item.photo_url ? (
+                      <img src={item.photo_url} alt="" style={{ width: '45px', height: '45px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #eee' }} />
+                    ) : (
+                      <div style={{ width: '45px', height: '45px', borderRadius: '6px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>No Image</div>
+                    )}
+                  </td>
+                  <td style={{ ...tdStyle, fontWeight: '600' }}>{item.name}</td>
+                  <td style={tdStyle}>
+                    <span style={{ fontSize: '0.85rem', color: '#444', backgroundColor: '#f0f4f8', padding: '4px 8px', borderRadius: '4px' }}>
+                      {item.category || '未設定'}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ 
+                      fontSize: '0.8rem', 
+                      padding: '4px 10px', 
+                      borderRadius: '12px', 
+                      fontWeight: 'bold',
+                      backgroundColor: item.status === '保管中' ? '#e6f7ff' : '#fff1f0',
+                      color: item.status === '保管中' ? '#1890ff' : '#f5222d'
+                    }}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td style={tdStyle}>{item.location}</td>
+                  <td style={tdStyle}>
+                    <button 
+                      onClick={() => router.push(`/items/${item.id}`)}
+                      style={{ color: '#0070f3', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}
+                    >
+                      詳細表示
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {items.length === 0 && (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>
+              登録されているアイテムはありません。
             </div>
-          ))}
+          )}
         </div>
-
-        {items.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '5rem', backgroundColor: 'white', borderRadius: '12px', color: '#999' }}>
-            データがまだありません。右上のボタンから登録してください。
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 }
+
+// 共通スタイルの定義
+const thStyle: React.CSSProperties = {
+  padding: '16px 20px',
+  fontSize: '0.85rem',
+  color: '#86868b',
+  fontWeight: '600',
+  letterSpacing: '0.02em'
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '16px 20px',
+  fontSize: '0.95rem',
+  color: '#1d1d1f',
+  verticalAlign: 'middle'
+};
