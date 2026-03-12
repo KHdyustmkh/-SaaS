@@ -10,21 +10,15 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
 
-  // 最新のSupabaseクライアント作成
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // ログイン処理
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('ログイン中...');
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setMessage('エラー: ' + error.message);
     } else {
@@ -33,21 +27,16 @@ export default function LoginPage() {
     }
   };
 
-  // 新規登録処理（ご要望の2行改行メッセージを含む）
   const handleSignUp = async () => {
     setMessage('登録処理中...');
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
-
     if (error) {
       setMessage('登録エラー: ' + error.message);
     } else {
-      // 2行に改行したメッセージ
       setMessage('✅ 確認メールを送信しました。\nメール内のボタンを押して登録を完了させてください。');
     }
   };
@@ -55,28 +44,31 @@ export default function LoginPage() {
   return (
     <div style={{ 
       display: 'flex', 
-      flexDirection: 'column', 
+      justifyContent: 'center', 
       alignItems: 'center', 
-      marginTop: '100px', 
+      minHeight: '100vh', // 画面の縦中央に配置
+      backgroundColor: '#f5f5f5',
       fontFamily: 'sans-serif' 
     }}>
       <div style={{ 
+        width: '380px',
         padding: '40px', 
         border: '1px solid #ddd', 
-        borderRadius: '10px', 
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        backgroundColor: 'white'
+        borderRadius: '12px', 
+        boxShadow: '0 8px 16px rgba(0,0,0,0.05)',
+        backgroundColor: 'white',
+        position: 'relative' // 子要素の基準にする
       }}>
-        <h1 style={{ marginBottom: '20px', textAlign: 'center', color: '#333' }}>施設管理ログイン</h1>
+        <h1 style={{ marginBottom: '30px', textAlign: 'center', color: '#333', fontSize: '24px' }}>施設管理ログイン</h1>
         
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '300px' }}>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <input 
             type="email" 
             placeholder="メールアドレス" 
             value={email} 
             onChange={(e) => setEmail(e.target.value)} 
             required 
-            style={{ padding: '12px', borderRadius: '5px', border: '1px solid #ccc' }} 
+            style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '16px' }} 
           />
           <input 
             type="password" 
@@ -84,21 +76,12 @@ export default function LoginPage() {
             value={password} 
             onChange={(e) => setPassword(e.target.value)} 
             required 
-            style={{ padding: '12px', borderRadius: '5px', border: '1px solid #ccc' }} 
+            style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '16px' }} 
           />
           
           <button 
             type="submit" 
-            style={{ 
-              backgroundColor: '#0070f3', 
-              color: 'white', 
-              padding: '12px', 
-              borderRadius: '5px', 
-              border: 'none', 
-              cursor: 'pointer', 
-              fontWeight: 'bold',
-              fontSize: '16px'
-            }}
+            style={{ backgroundColor: '#0070f3', color: 'white', padding: '14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', marginTop: '10px' }}
           >
             ログイン
           </button>
@@ -106,33 +89,28 @@ export default function LoginPage() {
           <button 
             type="button" 
             onClick={handleSignUp} 
-            style={{ 
-              backgroundColor: 'white', 
-              color: '#0070f3', 
-              padding: '10px', 
-              borderRadius: '5px', 
-              border: '1px solid #0070f3', 
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
+            style={{ backgroundColor: 'transparent', color: '#0070f3', padding: '10px', borderRadius: '6px', border: '1px solid #0070f3', cursor: 'pointer', fontSize: '14px' }}
           >
             新規施設として登録
           </button>
         </form>
 
-        {message && (
-          <p style={{ 
-            color: message.includes('エラー') ? '#ff4d4f' : '#0070f3', 
-            marginTop: '20px', 
-            textAlign: 'center', 
-            fontSize: '14px',
-            lineHeight: '1.6',
-            whiteSpace: 'pre-wrap', // これが改行を有効にするポイントです
-            fontWeight: '500'
-          }}>
-            {message}
-          </p>
-        )}
+        {/* メッセージ表示エリア：高さを固定することで入力欄のズレを防ぐ */}
+        <div style={{ minHeight: '60px', marginTop: '20px' }}>
+          {message && (
+            <p style={{ 
+              color: message.includes('エラー') ? '#ff4d4f' : '#0070f3', 
+              textAlign: 'center', 
+              fontSize: '14px',
+              lineHeight: '1.5',
+              whiteSpace: 'pre-wrap',
+              fontWeight: '500',
+              margin: '0'
+            }}>
+              {message}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
