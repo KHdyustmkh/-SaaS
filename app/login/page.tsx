@@ -10,15 +10,21 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
 
+  // 最新のSupabaseクライアント作成
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // ログイン処理
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('ログイン中...');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
     if (error) {
       setMessage('エラー: ' + error.message);
     } else {
@@ -27,6 +33,7 @@ export default function LoginPage() {
     }
   };
 
+  // 新規登録処理（ご要望の2行改行メッセージを含む）
   const handleSignUp = async () => {
     setMessage('登録処理中...');
     const { error } = await supabase.auth.signUp({
@@ -36,24 +43,96 @@ export default function LoginPage() {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+
     if (error) {
       setMessage('登録エラー: ' + error.message);
     } else {
-      setMessage('確認メールを送りました。メール内のボタンを押して登録を完了させてください。');
+      // 2行に改行したメッセージ
+      setMessage('✅ 確認メールを送信しました。\nメール内のボタンを押して登録を完了させてください。');
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '100px', fontFamily: 'sans-serif' }}>
-      <div style={{ padding: '40px', border: '1px solid #ddd', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ marginBottom: '20px', textAlign: 'center' }}>施設管理ログイン</h1>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      marginTop: '100px', 
+      fontFamily: 'sans-serif' 
+    }}>
+      <div style={{ 
+        padding: '40px', 
+        border: '1px solid #ddd', 
+        borderRadius: '10px', 
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        backgroundColor: 'white'
+      }}>
+        <h1 style={{ marginBottom: '20px', textAlign: 'center', color: '#333' }}>施設管理ログイン</h1>
+        
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '300px' }}>
-          <input type="email" placeholder="メールアドレス" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: '12px', borderRadius: '5px', border: '1px solid #ccc' }} />
-          <input type="password" placeholder="パスワード" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: '12px', borderRadius: '5px', border: '1px solid #ccc' }} />
-          <button type="submit" style={{ backgroundColor: '#0070f3', color: 'white', padding: '12px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>ログイン</button>
-          <button type="button" onClick={handleSignUp} style={{ backgroundColor: 'white', color: '#0070f3', padding: '10px', borderRadius: '5px', border: '1px solid #0070f3', cursor: 'pointer' }}>新規施設として登録</button>
+          <input 
+            type="email" 
+            placeholder="メールアドレス" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            required 
+            style={{ padding: '12px', borderRadius: '5px', border: '1px solid #ccc' }} 
+          />
+          <input 
+            type="password" 
+            placeholder="パスワード" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            required 
+            style={{ padding: '12px', borderRadius: '5px', border: '1px solid #ccc' }} 
+          />
+          
+          <button 
+            type="submit" 
+            style={{ 
+              backgroundColor: '#0070f3', 
+              color: 'white', 
+              padding: '12px', 
+              borderRadius: '5px', 
+              border: 'none', 
+              cursor: 'pointer', 
+              fontWeight: 'bold',
+              fontSize: '16px'
+            }}
+          >
+            ログイン
+          </button>
+          
+          <button 
+            type="button" 
+            onClick={handleSignUp} 
+            style={{ 
+              backgroundColor: 'white', 
+              color: '#0070f3', 
+              padding: '10px', 
+              borderRadius: '5px', 
+              border: '1px solid #0070f3', 
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            新規施設として登録
+          </button>
         </form>
-        {message && <p style={{ color: message.includes('エラー') ? 'red' : 'blue', marginTop: '20px', textAlign: 'center', fontSize: '14px' }}>{message}</p>}
+
+        {message && (
+          <p style={{ 
+            color: message.includes('エラー') ? '#ff4d4f' : '#0070f3', 
+            marginTop: '20px', 
+            textAlign: 'center', 
+            fontSize: '14px',
+            lineHeight: '1.6',
+            whiteSpace: 'pre-wrap', // これが改行を有効にするポイントです
+            fontWeight: '500'
+          }}>
+            {message}
+          </p>
+        )}
       </div>
     </div>
   );
