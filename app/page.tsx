@@ -16,14 +16,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchItems = async () => {
-      // ログインチェック
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/login');
         return;
       }
 
-      // データの取得（最新順）
       const { data, error } = await supabase
         .from('lost_items')
         .select('*')
@@ -44,102 +42,116 @@ export default function DashboardPage() {
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
-        {/* ヘッダーエリア */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        {/* ヘッダー */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
-            <h1 style={{ fontSize: '1.8rem', margin: 0, color: '#1d1d1f' }}>拾得物管理ダッシュボード</h1>
-            <p style={{ color: '#86868b', margin: '5px 0 0' }}>現在 {items.length} 件のアイテムが登録されています</p>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1d1d1f', margin: 0 }}>管理中アイテム</h1>
+            <p style={{ color: '#86868b', marginTop: '8px' }}>全 {items.length} 件の拾得物が登録されています</p>
           </div>
           <button 
             onClick={() => router.push('/items/new')}
-            style={{ backgroundColor: '#0070f3', color: 'white', padding: '12px 24px', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' }}
+            style={{ backgroundColor: '#0070f3', color: 'white', padding: '14px 28px', borderRadius: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 14px rgba(0, 112, 243, 0.3)' }}
           >
-            + 新規アイテム登録
+            + 新規登録
           </button>
         </div>
 
-        {/* リストエリア */}
-        <div style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f9f9fb', borderBottom: '1px solid #eee' }}>
-                <th style={thStyle}>管理番号</th>
-                <th style={thStyle}>画像</th>
-                <th style={thStyle}>品名</th>
-                <th style={thStyle}>カテゴリー（大/中/種）</th>
-                <th style={thStyle}>ステータス</th>
-                <th style={thStyle}>拾得場所</th>
-                <th style={thStyle}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0', transition: '0.2s' }}>
-                  <td style={tdStyle}>{item.management_number}</td>
-                  <td style={tdStyle}>
-                    {item.photo_url ? (
-                      <img src={item.photo_url} alt="" style={{ width: '45px', height: '45px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #eee' }} />
-                    ) : (
-                      <div style={{ width: '45px', height: '45px', borderRadius: '6px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>No Image</div>
-                    )}
-                  </td>
-                  <td style={{ ...tdStyle, fontWeight: '600' }}>{item.name}</td>
-                  <td style={tdStyle}>
-                    <span style={{ fontSize: '0.85rem', color: '#444', backgroundColor: '#f0f4f8', padding: '4px 8px', borderRadius: '4px' }}>
-                      {item.category || '未設定'}
-                    </span>
-                  </td>
-                  <td style={tdStyle}>
-                    <span style={{ 
-                      fontSize: '0.8rem', 
-                      padding: '4px 10px', 
-                      borderRadius: '12px', 
-                      fontWeight: 'bold',
-                      backgroundColor: item.status === '保管中' ? '#e6f7ff' : '#fff1f0',
-                      color: item.status === '保管中' ? '#1890ff' : '#f5222d'
-                    }}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td style={tdStyle}>{item.location}</td>
-                  <td style={tdStyle}>
-                    <button 
-                      onClick={() => router.push(`/items/${item.id}`)}
-                      style={{ color: '#0070f3', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}
-                    >
-                      詳細表示
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          
-          {items.length === 0 && (
-            <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>
-              登録されているアイテムはありません。
+        {/* カードグリッド */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+          gap: '25px' 
+        }}>
+          {items.map((item) => (
+            <div 
+              key={item.id}
+              onClick={() => router.push(`/items/${item.id}`)}
+              style={{ 
+                backgroundColor: 'white', 
+                borderRadius: '18px', 
+                overflow: 'hidden', 
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
+                cursor: 'pointer',
+                transition: 'transform 0.2s, boxShadow 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-5px)';
+                e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.12)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+              }}
+            >
+              {/* 画像エリア */}
+              <div style={{ width: '100%', height: '200px', backgroundColor: '#f0f0f2', position: 'relative' }}>
+                {item.photo_url ? (
+                  <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '0.9rem' }}>No Image</div>
+                )}
+                {/* ステータスバッジ */}
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '12px', 
+                  right: '12px', 
+                  padding: '4px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: 'bold',
+                  backgroundColor: item.status === '保管中' ? '#0070f3' : '#ff3b30',
+                  color: 'white',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                }}>
+                  {item.status}
+                </div>
+              </div>
+
+              {/* コンテンツエリア */}
+              <div style={{ padding: '20px' }}>
+                <div style={{ color: '#86868b', fontSize: '0.75rem', fontWeight: '600', marginBottom: '4px' }}>
+                  {item.management_number}
+                </div>
+                <h3 style={{ margin: '0 0 12px', fontSize: '1.2rem', color: '#1d1d1f', fontWeight: 'bold' }}>
+                  {item.name}
+                </h3>
+                
+                {/* カテゴリーバッジ */}
+                <div style={{ 
+                  display: 'inline-block',
+                  backgroundColor: '#f2f2f7', 
+                  color: '#555', 
+                  padding: '4px 10px', 
+                  borderRadius: '6px', 
+                  fontSize: '0.75rem',
+                  marginBottom: '15px',
+                  border: '1px solid #e5e5ea'
+                }}>
+                  {item.category || 'カテゴリー未設定'}
+                </div>
+
+                {/* 修正済み箇所: pt を削除 */}
+                <div style={{ borderTop: '1px solid #f2f2f7', display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#444', fontSize: '0.85rem' }}>
+                    <span style={{ color: '#86868b' }}>場所:</span> {item.location}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#444', fontSize: '0.85rem' }}>
+                    <span style={{ color: '#86868b' }}>日時:</span> {item.found_at ? new Date(item.found_at).toLocaleDateString() : '-'}
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
+
+        {items.length === 0 && (
+          <div style={{ padding: '100px', textAlign: 'center', color: '#86868b', backgroundColor: 'white', borderRadius: '18px', marginTop: '20px' }}>
+            登録されているアイテムはありません。
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-// 共通スタイルの定義
-const thStyle: React.CSSProperties = {
-  padding: '16px 20px',
-  fontSize: '0.85rem',
-  color: '#86868b',
-  fontWeight: '600',
-  letterSpacing: '0.02em'
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: '16px 20px',
-  fontSize: '0.95rem',
-  color: '#1d1d1f',
-  verticalAlign: 'middle'
-};
