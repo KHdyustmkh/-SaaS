@@ -64,7 +64,11 @@ export default function DashboardPage() {
       <main style={{ padding: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1.5rem', margin: 0 }}>管理中のアイテム ({items.length})</h2>
-          <button style={{ backgroundColor: '#0070f3', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>
+          {/* 今後ここをクリックして登録ページへ飛ぶように設定します */}
+          <button 
+            onClick={() => router.push('/items/new')}
+            style={{ backgroundColor: '#0070f3', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+          >
             ＋ 新規登録
           </button>
         </div>
@@ -89,7 +93,8 @@ export default function DashboardPage() {
               }}
               onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-5px)')}
               onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-              onClick={() => alert(`詳細画面を表示します: ${item.name}`)}
+              /* 修正ポイント: クリックで詳細ページへ遷移 */
+              onClick={() => router.push(`/items/${item.id}`)}
             >
               {/* 画像エリア */}
               <div style={{ height: '180px', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
