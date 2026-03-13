@@ -1,4 +1,3 @@
-// 型定義を直接書くことで、インポートエラーを回避します
 export const CATEGORY_TREE: { [key: string]: { [key: string]: string[] } } = {
   "現金": { "現金": ["現金"] },
   "かばん類": {

@@ -5,35 +5,23 @@ export async function analyzeImage(base64Image: string) {
   const requestData = {
     requests: [
       {
-        image: {
-          content: base64Image,
-        },
-        features: [
-          {
-            type: "LABEL_DETECTION",
-            maxResults: 5, // 精度を高めるため候補を5つ取得
-          },
-        ],
-        // ★最重要：日本語（ja）を最優先にする指示
-        imageContext: {
-          languageHints: ["ja"],
-        },
+        image: { content: base64Image },
+        features: [{ type: "LABEL_DETECTION", maxResults: 1 }],
+        imageContext: { languageHints: ["ja"] },
       },
     ],
   };
 
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(requestData),
   });
 
   const result = await response.json();
   
   if (result.responses && result.responses[0].labelAnnotations) {
-    // 取得した候補の中から、日本語が含まれている可能性が最も高い最初の候補を返します
+    // 最初の判定結果（例: "Watch" や "腕時計"）を返します
     return result.responses[0].labelAnnotations[0].description;
   }
   
