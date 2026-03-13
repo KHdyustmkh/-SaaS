@@ -60,25 +60,40 @@ export default function NewItemPage() {
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
-      
-      // AI自体に日本語で答えるよう指示し、結果を取得
       let aiResult = await analyzeImage(base64);
 
-      // 強制日本語変換マップ（拡充版）
+      // 【Gemini予測に基づく強化版日本語変換辞書】
       const forceJapaneseMap: { [key: string]: string } = {
-        "watch": "腕時計", "wristwatch": "腕時計", "clock": "時計", "ウォッチ": "腕時計",
-        "wallet": "財布", "purse": "財布", "billfold": "財布", "財布類": "財布",
-        "bag": "カバン", "handbag": "ハンドバッグ", "backpack": "リュックサック",
-        "smartphone": "スマートフォン", "iphone": "スマートフォン", "phone": "スマートフォン",
-        "glasses": "めがね", "eyeglasses": "めがね", "sunglasses": "サングラス",
-        "key": "鍵", "keys": "鍵", "keychain": "キーホルダー", "家鍵": "鍵",
-        "umbrella": "傘", "parasol": "日傘", "雨傘": "傘",
-        "card": "カードケース", "credit card": "カード",
-        "earbuds": "イヤホン", "headphones": "ヘッドホン"
+        // 衣類系：Googleはこれらを「Top」などと返しやすいため、日本のカテゴリー名へ変換
+        "top": "Tシャツ", "clothing": "衣類", "shirt": "服", "outerwear": "上着", "activewear": "服",
+        // 貴重品・時計系
+        "watch": "腕時計", "wristwatch": "腕時計", "analog watch": "腕時計",
+        // 財布・貴重品系
+        "wallet": "財布", "purse": "財布", "coin purse": "財布", "money bag": "財布",
+        "key": "鍵", "keys": "鍵", "keychain": "キーホルダー",
+        // 電子機器系
+        "smartphone": "スマートフォン", "iphone": "スマートフォン", "mobile phone": "スマートフォン", "gadget": "電子機器",
+        // バッグ・日用品系
+        "bag": "カバン", "handbag": "ハンドバッグ", "backpack": "リュックサック", "luggage": "カバン",
+        "umbrella": "傘", "parasol": "傘",
+        "glasses": "めがね", "eyewear": "めがね", "vision care": "めがね",
+        "footwear": "靴", "shoe": "靴", "sneaker": "靴"
       };
 
       const lowerResult = aiResult.toLowerCase().trim();
-      const targetName = forceJapaneseMap[lowerResult] || aiResult;
+      
+      // 1. 完全一致チェック
+      let targetName = forceJapaneseMap[lowerResult] || aiResult;
+
+      // 2. 部分一致チェック（AIが "Red Top" などと返した場合の救済）
+      if (!forceJapaneseMap[lowerResult]) {
+        for (const key in forceJapaneseMap) {
+          if (lowerResult.includes(key)) {
+            targetName = forceJapaneseMap[key];
+            break;
+          }
+        }
+      }
 
       let foundMain = "";
       let foundSub = "";
@@ -88,7 +103,6 @@ export default function NewItemPage() {
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
           for (const type of CATEGORY_TREE[main][sub]) {
-            // 日本語名とAI結果の部分一致を確認
             if (targetName.includes(type) || type.includes(targetName)) {
               foundMain = main;
               foundSub = sub;
@@ -103,9 +117,9 @@ export default function NewItemPage() {
         setMainCategory(foundMain);
         setSubCategory(foundSub);
         setItemType(foundType);
-        setName(foundType); // カテゴリーツリー内の日本語名をセット
+        setName(foundType); 
       } else {
-        setName(targetName); // 見つからない場合も日本語変換済みの名前をセット
+        setName(targetName); 
       }
     } catch (error) {
       console.error("AI解析エラー:", error);
@@ -120,7 +134,6 @@ export default function NewItemPage() {
     setLoading(true);
     setErrorMsg(null);
     
-    // 【修正】現在のログインユーザーを厳格に取得
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { 
       router.push('/login'); 
@@ -141,7 +154,6 @@ export default function NewItemPage() {
 
       const combinedCategory = `${mainCategory} / ${subCategory} / ${itemType}`;
 
-      // 【重要修正】user_id を含めてインサートし、所有者を明確にする
       const { error: dbError } = await supabase.from('lost_items').insert([{
         management_number: managementNumber,
         name: name,
@@ -152,7 +164,7 @@ export default function NewItemPage() {
         description: description,
         photo_url: uploadedUrls[0] || null,
         face_photo_url: uploadedUrls.slice(1).join(',') || null,
-        user_id: user.id // この1行が他人のデータ混入を防ぐ鍵です
+        user_id: user.id
       }]);
 
       if (dbError) throw new Error(`DB登録エラー: ${dbError.message}`);
