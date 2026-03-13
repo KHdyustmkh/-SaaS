@@ -103,21 +103,23 @@ function ListContent() {
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        {/* 【修正】検索窓の最大幅を maxWidth: '400px' で固定 */}
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* 【最終修正】flexの設定を詳細に見直し、長さを完全に制御 */}
+        <div style={{ marginBottom: '25px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start' }}>
           <input 
             type="text" 
             placeholder="リスト内を検索..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ 
-              width: '100%',
-              maxWidth: '400px', // ★ここを調整しました。長すぎる場合はここを300px等にしてください
-              padding: '12px', 
+              width: '300px',    // ★基準の長さを300pxに固定
+              flex: 'none',      // ★これ以上伸びることを禁止
+              padding: '12px 16px', 
               borderRadius: '10px', 
               border: '1px solid #d2d2d7', 
               outline: 'none',
-              boxSizing: 'border-box'
+              fontSize: '0.95rem',
+              boxSizing: 'border-box',
+              backgroundColor: 'white'
             }}
           />
           <select 
@@ -125,12 +127,14 @@ function ListContent() {
             onChange={(e) => setSortBy(e.target.value)}
             style={{ 
               width: '160px', 
+              flex: 'none',      // ★これ以上伸びることを禁止
               padding: '12px', 
               borderRadius: '10px', 
               border: '1px solid #d2d2d7', 
               backgroundColor: 'white', 
               cursor: 'pointer', 
               outline: 'none',
+              fontSize: '0.9rem',
               boxSizing: 'border-box'
             }}
           >
