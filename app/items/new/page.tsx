@@ -128,7 +128,7 @@ export default function NewItemPage() {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
         const { error: uploadError } = await supabase.storage.from('item-images').upload(filePath, file);
-        if (uploadError) throw new Error(`アップロード失敗: ${uploadError.message}`);
+        if (uploadError) throw new Error(`失敗: ${uploadError.message}`);
         const { data: { publicUrl } } = supabase.storage.from('item-images').getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
       }
@@ -167,18 +167,30 @@ export default function NewItemPage() {
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>管理番号 *</label><input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           
           <div style={{ padding: '15px', border: '2px dashed #ccc', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px' }}>写真</label>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px' }}>写真（最大5枚）</label>
             <input type="file" accept="image/*" capture="environment" multiple onChange={handleImageChange} style={{ marginBottom: '15px' }} />
+            
+            {/* ★ 写真プレビュー表示エリアの拡大修正 ★ */}
+            {imagePreviews.length > 0 && (
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '15px', justifyContent: 'center' }}>
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} style={{ position: 'relative', width: '140px', height: '140px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                    <img src={preview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button type="button" onClick={() => removeImage(index)} style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(255,0,0,0.8)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold' }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {imageFiles.length > 0 && (
               <button type="button" onClick={handleAIAnalysis} disabled={isAnalyzing} style={{ width: '100%', padding: '12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                {isAnalyzing ? '🔄 解析中...' : '✨ AIで自動判定'}
+                {isAnalyzing ? '🔄 解析中...' : '✨ AIで品名とカテゴリーを自動判定'}
               </button>
             )}
           </div>
 
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>品名 *</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
 
-          {/* ★ カテゴリー選択を縦並びに修正 ★ */}
           <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
             <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold', color: '#0070f3' }}>詳細カテゴリー *</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -211,7 +223,7 @@ export default function NewItemPage() {
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>詳細説明</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
 
           <button type="submit" disabled={loading} style={{ backgroundColor: '#0070f3', color: 'white', padding: '15px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>
-            {loading ? '登録中...' : '登録する'}
+            {loading ? '登録中...' : 'この内容で登録する'}
           </button>
         </form>
       </div>
