@@ -1,9 +1,9 @@
-import type { Metadata, Viewport } from "next"; // Viewportを追加
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Link from "next/link";
 import { LayoutDashboard, PlusCircle } from "lucide-react";
 
-// ★追加：拡大縮小を禁止する設定
+// 拡大縮小を禁止する設定（維持）
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "拾得物管理システム",
+  title: "拾得物管理ポータル", // ★ここを修正（タブの名前）
   description: "効率的な施設内管理ツール",
 };
 
@@ -23,9 +23,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      {/* Next.jsが自動的にmetaタグを生成するため、
-        <head>内に手動でviewportを書く必要はありません。
-      */}
       <body style={{ margin: 0, backgroundColor: "#f8fafc" }}>
         {/* 固定ナビゲーションバー */}
         <nav style={{
@@ -48,19 +45,20 @@ export default function RootLayout({
             justifyContent: "space-between",
             alignItems: "center"
           }}>
-            {/* 左側：ロゴ（ダッシュボードへ戻る） */}
+            {/* 左側：ロゴ */}
             <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
                 <div style={{ backgroundColor: "#2563eb", padding: "6px", borderRadius: "8px" }}>
                   <LayoutDashboard size={20} color="#fff" />
                 </div>
+                {/* ★ここを修正（画面上の表示名） */}
                 <span style={{ fontWeight: "900", fontSize: "16px", color: "#0f172a", letterSpacing: "-0.5px" }}>
-                  LOST ITEM MANAGER
+                  拾得物管理ポータル
                 </span>
               </div>
             </Link>
 
-            {/* 右側：アクションボタン */}
+            {/* 右側：アクションボタン（維持） */}
             <div style={{ display: "flex", gap: "12px" }}>
               <Link href="/" style={{ textDecoration: "none" }}>
                 <button style={{
