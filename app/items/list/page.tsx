@@ -97,69 +97,86 @@ function ListContent() {
           <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', color: '#007aff', fontSize: '1rem', cursor: 'pointer', fontWeight: '600' }}>
             ＜ 戻る
           </button>
-          <h1 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0 }}>{statusFilter} 一覧</h1>
-          <span style={{ backgroundColor: '#86868b', color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>{sortedAndFilteredList.length} 件</span>
+          <h1 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>{statusFilter} 一覧</h1>
+          <span style={{ backgroundColor: '#86868b', color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.75rem' }}>{sortedAndFilteredList.length} 件</span>
         </div>
       </header>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        {/* 【最終修正】flexの設定を詳細に見直し、長さを完全に制御 */}
-        <div style={{ marginBottom: '25px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start' }}>
-          <input 
-            type="text" 
-            placeholder="リスト内を検索..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ 
-              width: '300px',    // ★基準の長さを300pxに固定
-              flex: 'none',      // ★これ以上伸びることを禁止
-              padding: '12px 16px', 
-              borderRadius: '10px', 
-              border: '1px solid #d2d2d7', 
-              outline: 'none',
-              fontSize: '0.95rem',
-              boxSizing: 'border-box',
-              backgroundColor: 'white'
-            }}
-          />
-          <select 
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{ 
-              width: '160px', 
-              flex: 'none',      // ★これ以上伸びることを禁止
-              padding: '12px', 
-              borderRadius: '10px', 
-              border: '1px solid #d2d2d7', 
-              backgroundColor: 'white', 
-              cursor: 'pointer', 
-              outline: 'none',
-              fontSize: '0.9rem',
-              boxSizing: 'border-box'
-            }}
-          >
-            <option value="deadline">期限が近い順</option>
-            <option value="newest">登録が新しい順</option>
-            <option value="oldest">登録が古い順</option>
-          </select>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+        {/* --- 修正の要：操作エリアの構造刷新 --- */}
+        <div style={{ 
+          marginBottom: '24px', 
+          display: 'flex', 
+          flexDirection: 'column', // 基本は縦並び（スマホ用）
+          gap: '12px' 
+        }}>
+          {/* PCサイズ（768px以上）のみ横並びにするためのラッパー代わり */}
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '12px',
+            alignItems: 'center'
+          }}>
+            <input 
+              type="text" 
+              placeholder="リスト内を検索..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ 
+                width: '100%',     // スマホでは全幅
+                maxWidth: '320px', // PCでも伸びすぎない
+                padding: '12px', 
+                borderRadius: '10px', 
+                border: '1px solid #d2d2d7', 
+                fontSize: '16px',   // スマホでズームされないためのサイズ
+                outline: 'none',
+                boxSizing: 'border-box',
+                backgroundColor: 'white'
+              }}
+            />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#86868b', whiteSpace: 'nowrap' }}>並び替え:</span>
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{ 
+                  width: '160px', 
+                  padding: '10px', 
+                  borderRadius: '10px', 
+                  border: '1px solid #d2d2d7', 
+                  backgroundColor: 'white', 
+                  cursor: 'pointer', 
+                  outline: 'none',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <option value="deadline">期限が近い順</option>
+                <option value="newest">登録が新しい順</option>
+                <option value="oldest">登録が古い順</option>
+              </select>
+            </div>
+          </div>
         </div>
+        {/* ------------------------------------- */}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '15px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
           {sortedAndFilteredList.length === 0 ? (
-            <div style={{ color: '#86868b', textAlign: 'center', gridColumn: '1 / -1', padding: '40px' }}>該当するアイテムはありません</div>
+            <div style={{ color: '#86868b', textAlign: 'center', gridColumn: '1 / -1', padding: '40px' }}>該当なし</div>
           ) : (
             sortedAndFilteredList.map((item) => {
               const deadline = getDeadlineInfo(item);
               return (
-                <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', cursor: 'pointer', position: 'relative' }}>
-                  {deadline && <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800' }}>{deadline.label}</div>}
-                  <div style={{ width: '100%', height: '130px', backgroundColor: '#f5f5f7' }}>
-                    {item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#d2d2d7', fontSize: '2rem' }}>📦</div>}
+                <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer', position: 'relative' }}>
+                  {deadline && <div style={{ position: 'absolute', top: '6px', right: '6px', backgroundColor: deadline.color, color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: '800', zIndex: 1 }}>{deadline.label}</div>}
+                  <div style={{ width: '100%', height: '120px', backgroundColor: '#f5f5f7' }}>
+                    {item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#d2d2d7', fontSize: '1.5rem' }}>📦</div>}
                   </div>
-                  <div style={{ padding: '12px' }}>
-                    <div style={{ fontSize: '0.65rem', color: '#007aff', fontWeight: '700', marginBottom: '4px' }}>{item.category}</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1d1d1f', marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#86868b' }}>#{item.management_number}</div>
+                  <div style={{ padding: '10px' }}>
+                    <div style={{ fontSize: '0.6rem', color: '#007aff', fontWeight: '700' }}>{item.category}</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1d1d1f', margin: '2px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#86868b' }}>#{item.management_number}</div>
                   </div>
                 </div>
               );
