@@ -55,71 +55,37 @@ export default function NewItemPage() {
     setImagePreviews(newPreviews);
   };
 
+  // 【機能強化版】AI解析ハンドラー
   const handleAIAnalysis = async () => {
     if (imageFiles.length === 0) return;
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
-      let aiResult = await analyzeImage(base64);
+      // lib/vision.ts から JSON オブジェクトを受け取る
+      const aiResult = await analyzeImage(base64); 
 
-      // 【Gemini予測に基づく強化版日本語変換辞書】
-      const forceJapaneseMap: { [key: string]: string } = {
-        // 衣類系：Googleはこれらを「Top」などと返しやすいため、日本のカテゴリー名へ変換
-        "top": "Tシャツ", "clothing": "衣類", "shirt": "服", "outerwear": "上着", "activewear": "服",
-        // 貴重品・時計系
-        "watch": "腕時計", "wristwatch": "腕時計", "analog watch": "腕時計",
-        // 財布・貴重品系
-        "wallet": "財布", "purse": "財布", "coin purse": "財布", "money bag": "財布",
-        "key": "鍵", "keys": "鍵", "keychain": "キーホルダー",
-        // 電子機器系
-        "smartphone": "スマートフォン", "iphone": "スマートフォン", "mobile phone": "スマートフォン", "gadget": "電子機器",
-        // バッグ・日用品系
-        "bag": "カバン", "handbag": "ハンドバッグ", "backpack": "リュックサック", "luggage": "カバン",
-        "umbrella": "傘", "parasol": "傘",
-        "glasses": "めがね", "eyewear": "めがね", "vision care": "めがね",
-        "footwear": "靴", "shoe": "靴", "sneaker": "靴"
-      };
+      // 1. 品名（固有名詞）をセット
+      setName(aiResult.product_name || "");
 
-      const lowerResult = aiResult.toLowerCase().trim();
-      
-      // 1. 完全一致チェック
-      let targetName = forceJapaneseMap[lowerResult] || aiResult;
+      // 2. 詳細説明に色や特徴を自動入力
+      const autoDesc = `色: ${aiResult.color}\n特徴: ${aiResult.description}`;
+      setDescription(autoDesc);
 
-      // 2. 部分一致チェック（AIが "Red Top" などと返した場合の救済）
-      if (!forceJapaneseMap[lowerResult]) {
-        for (const key in forceJapaneseMap) {
-          if (lowerResult.includes(key)) {
-            targetName = forceJapaneseMap[key];
-            break;
-          }
-        }
-      }
-
-      let foundMain = "";
-      let foundSub = "";
-      let foundType = "";
-
+      // 3. カテゴリーツリーへの自動マッピング
+      const targetHint = aiResult.category_hint || "";
       outerLoop:
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
           for (const type of CATEGORY_TREE[main][sub]) {
-            if (targetName.includes(type) || type.includes(targetName)) {
-              foundMain = main;
-              foundSub = sub;
-              foundType = type;
+            // AIのヒントとカテゴリーマスターが部分一致するか確認
+            if (targetHint.includes(type) || type.includes(targetHint)) {
+              setMainCategory(main);
+              setSubCategory(sub);
+              setItemType(type);
               break outerLoop;
             }
           }
         }
-      }
-
-      if (foundMain) {
-        setMainCategory(foundMain);
-        setSubCategory(foundSub);
-        setItemType(foundType);
-        setName(foundType); 
-      } else {
-        setName(targetName); 
       }
     } catch (error) {
       console.error("AI解析エラー:", error);
@@ -135,10 +101,7 @@ export default function NewItemPage() {
     setErrorMsg(null);
     
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { 
-      router.push('/login'); 
-      return; 
-    }
+    if (!user) { router.push('/login'); return; }
 
     try {
       const uploadedUrls: string[] = [];
@@ -147,7 +110,7 @@ export default function NewItemPage() {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
         const { error: uploadError } = await supabase.storage.from('item-images').upload(filePath, file);
-        if (uploadError) throw new Error(`失敗: ${uploadError.message}`);
+        if (uploadError) throw new Error(`アップロード失敗: ${uploadError.message}`);
         const { data: { publicUrl } } = supabase.storage.from('item-images').getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
       }
@@ -168,7 +131,6 @@ export default function NewItemPage() {
       }]);
 
       if (dbError) throw new Error(`DB登録エラー: ${dbError.message}`);
-      
       router.push('/');
       router.refresh();
     } catch (err: any) {
@@ -182,7 +144,7 @@ export default function NewItemPage() {
       <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h1 style={{ fontSize: '1.5rem', margin: 0 }}>拾得物 新規登録</h1>
-          <button onClick={() => router.push('/')} style={{ padding: '8px 16px', backgroundColor: '#e5e5e7', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>キャンセル</button>
+          <button type="button" onClick={() => router.push('/')} style={{ padding: '8px 16px', backgroundColor: '#e5e5e7', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>キャンセル</button>
         </div>
 
         {errorMsg && <div style={{ backgroundColor: '#fff1f0', color: '#f5222d', padding: '10px', borderRadius: '6px', marginBottom: '20px' }}>{errorMsg}</div>}
@@ -212,7 +174,7 @@ export default function NewItemPage() {
             )}
           </div>
 
-          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>品名 *</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
+          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>品名 *</label><input type="text" value={name} placeholder="例: iPhone 15 Pro" onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
 
           <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
             <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold', color: '#0070f3' }}>詳細カテゴリー *</label>
