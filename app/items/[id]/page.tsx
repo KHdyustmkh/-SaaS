@@ -19,6 +19,32 @@ export default function ItemDetailPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // 削除処理の追加
+  const handleDelete = async () => {
+    if (!id) return;
+    
+    const confirmDelete = window.confirm('このアイテムを完全に削除しますか？この操作は取り消せません。');
+    if (!confirmDelete) return;
+
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('lost_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      alert('アイテムを削除しました。');
+      router.push('/');
+      router.refresh();
+    } catch (error: any) {
+      alert('削除に失敗しました: ' + error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return;
     setUpdating(true);
@@ -30,18 +56,12 @@ export default function ItemDetailPage() {
 
       if (error) throw error;
 
-      // 1. サーバー側のデータを最新化する命令を出す
       router.refresh();
-      
-      // 2. ローカルの状態を即時更新
       setItem((prev: any) => ({ ...prev, status: newStatus }));
-      
       alert(`ステータスを「${newStatus}」に変更しました。一覧に戻ります。`);
-      
-      // 3. 一覧へ戻る（ここが確実な移動の鍵）
       router.push('/');
     } catch (error: any) {
-      alert('更新に失敗しました。DB制約を確認してください: ' + error.message);
+      alert('更新に失敗しました: ' + error.message);
     } finally {
       setUpdating(false);
     }
@@ -86,34 +106,36 @@ export default function ItemDetailPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <button onClick={() => router.push('/')} style={{ marginBottom: '20px', padding: '10px 20px', cursor: 'pointer', border: 'none', backgroundColor: '#ddd', borderRadius: '8px', fontWeight: 'bold' }}>← 戻る</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <button onClick={() => router.push('/')} style={{ padding: '10px 20px', cursor: 'pointer', border: 'none', backgroundColor: '#ddd', borderRadius: '8px', fontWeight: 'bold' }}>← 戻る</button>
+          
+          {/* 削除ボタンの追加 */}
+          <button 
+            onClick={handleDelete} 
+            disabled={updating}
+            style={{ padding: '10px 20px', cursor: 'pointer', border: 'none', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: 'bold' }}
+          >
+            🗑️ このアイテムを消去
+          </button>
+        </div>
 
         <div style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#1a1a1a', padding: '20px' }}>
             <div style={{ width: '100%', height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
               {allPhotos.length > 0 ? <img src={allPhotos[activePhotoIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <div style={{ color: '#666' }}>画像なし</div>}
             </div>
-            {allPhotos.length > 1 && (
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                {allPhotos.map((url, index) => (
-                  <div key={index} onClick={() => setActivePhotoIndex(index)} style={{ width: '60px', height: '60px', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: activePhotoIndex === index ? '2px solid #0070f3' : '2px solid transparent', opacity: activePhotoIndex === index ? 1 : 0.5 }}>
-                    <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div style={{ padding: '40px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', borderBottom: '2px solid #f0f0f0', paddingBottom: '15px' }}>
               <div>
-                <h1 style={{ fontSize: '1.8rem', margin: '0 0 5px 0' }}>{item.name}</h1>
+                <h1 style={{ fontSize: '1.8rem', margin: '0' }}>{item.name}</h1>
                 <div style={{ color: '#888' }}>管理番号: {item.management_number}</div>
               </div>
 
               <div style={{ textAlign: 'right' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#888', marginBottom: '5px' }}>ステータス変更</label>
-                <select value={item.status} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #0070f3', fontWeight: 'bold', color: '#0070f3', cursor: 'pointer' }}>
+                <select value={item.status} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #0070f3', fontWeight: 'bold', color: '#0070f3' }}>
                   <option value="保管中">🔵 保管中</option>
                   <option value="引き渡し済">🟢 引き渡し済</option>
                   <option value="回収済">🟡 回収済</option>
@@ -121,7 +143,7 @@ export default function ItemDetailPage() {
                 </select>
               </div>
             </div>
-
+            {/* 詳細情報は以前のまま維持されます */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '30px' }}>
               <section>
                 <div style={{ marginBottom: '20px' }}><label style={{ color: '#888', fontSize: '0.85rem' }}>拾得場所</label><div style={{ fontWeight: 'bold' }}>{item.location}</div></div>
