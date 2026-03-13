@@ -25,8 +25,6 @@ function ListContent() {
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // 【新機能】ソート状態を管理（初期値：期限が近い順）
   const [sortBy, setSortBy] = useState('deadline'); 
 
   const supabase = createBrowserClient(
@@ -65,9 +63,7 @@ function ListContent() {
     };
   };
 
-  // 【新機能】検索 ＋ ソートの統合ロジック
   const sortedAndFilteredList = useMemo(() => {
-    // 1. まずはステータスと検索ワードで絞り込む
     let list = items.filter(item => {
       const definedStatuses = ['引き渡し済', '回収済', '廃棄済'];
       const currentItemStatus = (!item.status || item.status === '保管中' || !definedStatuses.includes(item.status)) ? '保管中' : item.status;
@@ -78,12 +74,11 @@ function ListContent() {
              (item.management_number && item.management_number.includes(searchQuery));
     });
 
-    // 2. 指定されたルールで並び替える
     return list.sort((a, b) => {
       if (sortBy === 'deadline') {
         const deadlineA = getDeadlineInfo(a)?.remaining ?? 999;
         const deadlineB = getDeadlineInfo(b)?.remaining ?? 999;
-        return deadlineA - deadlineB; // 期限が近い（数字が小さい）順
+        return deadlineA - deadlineB;
       } else if (sortBy === 'newest') {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       } else if (sortBy === 'oldest') {
@@ -108,19 +103,36 @@ function ListContent() {
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        {/* 【新機能】検索 ＋ ソートの操作バー */}
+        {/* 【修正箇所】はみ出さないように box-sizing と width を調整 */}
         <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <input 
             type="text" 
             placeholder="このリスト内を検索..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ flex: 2, minWidth: '200px', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', outline: 'none' }}
+            style={{ 
+              flex: '1 1 200px', // 幅が足りない時は200pxを維持しつつ伸び縮み
+              minWidth: '0',      // flexコンテナ内での予期せぬはみ出しを防止
+              padding: '12px', 
+              borderRadius: '10px', 
+              border: '1px solid #d2d2d7', 
+              outline: 'none',
+              boxSizing: 'border-box' // パディングを幅に含める設定
+            }}
           />
           <select 
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            style={{ flex: 1, minWidth: '150px', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', cursor: 'pointer', outline: 'none' }}
+            style={{ 
+              flex: '0 0 150px', // プルダウンの幅は150pxで固定
+              padding: '12px', 
+              borderRadius: '10px', 
+              border: '1px solid #d2d2d7', 
+              backgroundColor: 'white', 
+              cursor: 'pointer', 
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
           >
             <option value="deadline">期限が近い順</option>
             <option value="newest">登録が新しい順</option>
