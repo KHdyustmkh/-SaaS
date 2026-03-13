@@ -104,54 +104,54 @@ function ListContent() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', boxSizing: 'border-box' }}>
         
-        {/* --- 画像の問題を根本解決する新レイアウト --- */}
+        {/* --- 操作エリア：重なりを物理的に排除する「縦積み」構造 --- */}
         <div style={{ 
           backgroundColor: 'white', 
           padding: '20px', 
           borderRadius: '16px', 
           boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-          marginBottom: '24px'
+          marginBottom: '24px',
+          display: 'block' // 横並び(flex)を完全にやめ、縦積みに固定
         }}>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr auto', // 検索窓が広がり、ソートは中身に合わせる
-            gap: '15px',
-            alignItems: 'center'
-          }}>
-            {/* 検索窓：コンテナの残りの幅を100%使うが、絶対に突き抜けない */}
-            <div style={{ position: 'relative', width: '100%' }}>
-              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868b' }}>🔍</span>
-              <input 
-                type="text" 
-                placeholder="品名、管理番号で検索..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  padding: '12px 12px 12px 40px', 
-                  borderRadius: '10px', 
-                  border: '1px solid #d2d2d7', 
-                  fontSize: '16px', 
-                  outline: 'none',
-                  boxSizing: 'border-box', // これで突き抜けを防止
-                  backgroundColor: '#f5f5f7'
-                }}
-              />
-            </div>
-            
-            {/* 並び替え：幅を固定して安定させる */}
+          {/* 1. 検索窓：幅を100%にせず、固定幅か最大幅で制御 */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px' }}>アイテム検索</label>
+            <input 
+              type="text" 
+              placeholder="品名、管理番号で検索..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ 
+                width: '100%', 
+                maxWidth: '400px', // PCでもこの幅で止まる
+                padding: '12px', 
+                borderRadius: '10px', 
+                border: '1px solid #d2d2d7', 
+                fontSize: '16px', 
+                outline: 'none',
+                boxSizing: 'border-box',
+                backgroundColor: '#f5f5f7',
+                display: 'block'
+              }}
+            />
+          </div>
+          
+          {/* 2. 並び替え：検索窓の下に配置（絶対に重ならない） */}
+          <div style={{ display: 'block' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px' }}>並び替え</label>
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               style={{ 
-                width: '160px', 
+                width: '200px', 
                 padding: '12px', 
                 borderRadius: '10px', 
                 border: '1px solid #d2d2d7', 
                 backgroundColor: 'white', 
                 fontSize: '0.9rem',
                 outline: 'none',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                display: 'block'
               }}
             >
               <option value="deadline">期限が近い順</option>
