@@ -4,7 +4,6 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
 
-// Vercel(TypeScript)エラー防止用の型定義
 interface LostItem {
   id: string;
   name: string;
@@ -18,7 +17,6 @@ interface LostItem {
   created_at: string;
 }
 
-// 検索パラメータ取得のためのコンポーネント分離
 function ListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,6 +25,9 @@ function ListContent() {
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // 【新機能】ソート状態を管理（初期値：期限が近い順）
+  const [sortBy, setSortBy] = useState('deadline'); 
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,7 +50,6 @@ function ListContent() {
     fetchItems();
   }, [fetchItems]);
 
-  // 【完全継承】ダッシュボードと同じ期限管理ロジック
   const getDeadlineInfo = (item: LostItem) => {
     if (item.status !== '保管中' || item.reported_to_police_at) return null;
     const foundDate = new Date(item.found_at);
@@ -58,57 +58,81 @@ function ListContent() {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const remaining = 7 - diffDays;
 
-    if (remaining <= 0) return { label: '期限切れ', color: '#ff3b30' };
-    if (remaining <= 2) return { label: `あと${remaining}日`, color: '#ff9500' };
-    return { label: `あと${remaining}日`, color: '#34c759' };
+    return { 
+      label: remaining <= 0 ? '期限切れ' : `あと${remaining}日`, 
+      color: remaining <= 0 ? '#ff3b30' : (remaining <= 2 ? '#ff9500' : '#34c759'),
+      remaining 
+    };
   };
 
-  // フィルタリングロジック（ステータス一致 ＋ キーワード検索）
-  const filteredList = useMemo(() => {
-    return items.filter(item => {
-      // ステータスの判定
+  // 【新機能】検索 ＋ ソートの統合ロジック
+  const sortedAndFilteredList = useMemo(() => {
+    // 1. まずはステータスと検索ワードで絞り込む
+    let list = items.filter(item => {
       const definedStatuses = ['引き渡し済', '回収済', '廃棄済'];
       const currentItemStatus = (!item.status || item.status === '保管中' || !definedStatuses.includes(item.status)) ? '保管中' : item.status;
-      
       const isCorrectStatus = currentItemStatus === statusFilter;
       if (!isCorrectStatus) return false;
 
-      // キーワード検索
       return item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
              (item.management_number && item.management_number.includes(searchQuery));
     });
-  }, [items, statusFilter, searchQuery]);
+
+    // 2. 指定されたルールで並び替える
+    return list.sort((a, b) => {
+      if (sortBy === 'deadline') {
+        const deadlineA = getDeadlineInfo(a)?.remaining ?? 999;
+        const deadlineB = getDeadlineInfo(b)?.remaining ?? 999;
+        return deadlineA - deadlineB; // 期限が近い（数字が小さい）順
+      } else if (sortBy === 'newest') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else if (sortBy === 'oldest') {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return 0;
+    });
+  }, [items, statusFilter, searchQuery, sortBy]);
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
 
   return (
-    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '15px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '20px' }}>
           <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', color: '#007aff', fontSize: '1rem', cursor: 'pointer', fontWeight: '600' }}>
             ＜ 戻る
           </button>
           <h1 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0 }}>{statusFilter} 一覧</h1>
-          <span style={{ backgroundColor: '#86868b', color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>{filteredList.length} 件</span>
+          <span style={{ backgroundColor: '#86868b', color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>{sortedAndFilteredList.length} 件</span>
         </div>
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ marginBottom: '20px', backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+        {/* 【新機能】検索 ＋ ソートの操作バー */}
+        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <input 
             type="text" 
-            placeholder={`${statusFilter}の中から検索...`} 
+            placeholder="このリスト内を検索..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d2d2d7', outline: 'none', fontSize: '1rem' }}
+            style={{ flex: 2, minWidth: '200px', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', outline: 'none' }}
           />
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{ flex: 1, minWidth: '150px', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="deadline">期限が近い順</option>
+            <option value="newest">登録が新しい順</option>
+            <option value="oldest">登録が古い順</option>
+          </select>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '15px' }}>
-          {filteredList.length === 0 ? (
+          {sortedAndFilteredList.length === 0 ? (
             <div style={{ color: '#86868b', textAlign: 'center', gridColumn: '1 / -1', padding: '40px' }}>該当するアイテムはありません</div>
           ) : (
-            filteredList.map((item) => {
+            sortedAndFilteredList.map((item) => {
               const deadline = getDeadlineInfo(item);
               return (
                 <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', cursor: 'pointer', position: 'relative' }}>
@@ -131,7 +155,6 @@ function ListContent() {
   );
 }
 
-// Suspenseでラップしてビルドエラーを回避
 export default function ListPage() {
   return (
     <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center' }}>読み込み中...</div>}>
