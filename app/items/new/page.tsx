@@ -3,6 +3,9 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
+// ★追加：先ほど作ったAI関数と変換関数を読み込む
+import { analyzeImage } from '@/lib/vision';
+import { convertToBase64 } from '@/lib/utils';
 
 // カテゴリーマスター
 const CATEGORY_TREE: Record<string, Record<string, string[]>> = {
@@ -22,6 +25,9 @@ export default function NewItemPage() {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // ★追加：AIが解析中かどうかを判定するステート
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // テキスト情報ステート
   const [managementNumber, setManagementNumber] = useState('');
@@ -69,6 +75,28 @@ export default function NewItemPage() {
     setImagePreviews(newPreviews);
   };
 
+  // ★追加：AIで画像を解析して品名を自動入力する処理
+  const handleAIAnalysis = async () => {
+    if (imageFiles.length === 0) return;
+    
+    setIsAnalyzing(true);
+    try {
+      // 1枚目の写真をBase64に変換
+      const base64 = await convertToBase64(imageFiles[0]);
+      // Google Vision APIに送信
+      const aiResult = await analyzeImage(base64);
+      
+      // 結果を「品名」の入力欄に自動でセットする
+      setName(aiResult);
+      
+    } catch (error) {
+      console.error("AI解析エラー:", error);
+      alert('AIの判定に失敗しました。');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   // 送信処理
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,9 +112,7 @@ export default function NewItemPage() {
     try {
       const uploadedUrls: string[] = [];
 
-      // 1. 画像のアップロード処理（1枚ずつStorageへ保存）
       for (const file of imageFiles) {
-        // 安全なファイル名を生成
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
@@ -97,7 +123,6 @@ export default function NewItemPage() {
 
         if (uploadError) throw new Error(`画像のアップロードに失敗しました: ${uploadError.message}`);
 
-        // 公開URLを取得
         const { data: { publicUrl } } = supabase.storage
           .from('item-images')
           .getPublicUrl(filePath);
@@ -105,14 +130,11 @@ export default function NewItemPage() {
         uploadedUrls.push(publicUrl);
       }
 
-      // 2. 既存のDB構造を壊さずにURLを振り分ける戦略
-      // 1枚目は photo_url に。2枚目以降はカンマ区切りで face_photo_url に格納
       const primaryPhotoUrl = uploadedUrls.length > 0 ? uploadedUrls[0] : null;
       const secondaryPhotosUrl = uploadedUrls.length > 1 ? uploadedUrls.slice(1).join(',') : null;
 
       const combinedCategory = `${mainCategory} / ${subCategory} / ${itemType}`;
 
-      // 3. データベースへの登録
       const { error: dbError } = await supabase.from('lost_items').insert([
         {
           management_number: managementNumber,
@@ -151,24 +173,9 @@ export default function NewItemPage() {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* テキスト入力群 */}
           <div><label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>管理番号 *</label><input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-          <div><label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>品名（名称） *</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-
-          {/* カテゴリー選択 */}
-          <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', fontSize: '0.9rem', color: '#0070f3' }}>詳細カテゴリー分類 *</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <select value={mainCategory} onChange={(e) => { setMainCategory(e.target.value); setSubCategory(''); setItemType(''); }} required style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}><option value="">大分類を選択</option>{mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
-              <select value={subCategory} onChange={(e) => { setSubCategory(e.target.value); setItemType(''); }} required disabled={!mainCategory} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: !mainCategory ? '#eee' : 'white' }}><option value="">中分類を選択</option>{subCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
-              <select value={itemType} onChange={(e) => setItemType(e.target.value)} required disabled={!subCategory} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: !subCategory ? '#eee' : 'white' }}><option value="">小分類を選択</option>{itemTypes.map(type => <option key={type} value={type}>{type}</option>)}</select>
-            </div>
-          </div>
-
-          <div><label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>拾得日時 *</label><input type="datetime-local" value={foundAt} onChange={(e) => setFoundAt(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-          <div><label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>拾得場所 *</label><input type="text" value={location} onChange={(e) => setLocation(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-
-          {/* 画像アップロード領域 */}
+          
+          {/* 画像アップロード領域（AIボタンを目立たせるために上に移動しました） */}
           <div style={{ padding: '15px', border: '2px dashed #ccc', borderRadius: '8px', backgroundColor: '#fafafa' }}>
             <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', fontSize: '0.9rem' }}>
               写真の添付（最大5枚まで）
@@ -182,9 +189,8 @@ export default function NewItemPage() {
               style={{ marginBottom: '15px' }}
             />
             
-            {/* プレビュー表示エリア */}
             {imagePreviews.length > 0 && (
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px' }}>
                 {imagePreviews.map((preview, index) => (
                   <div key={index} style={{ position: 'relative', width: '80px', height: '80px' }}>
                     <img src={preview} alt={`preview-${index}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px', border: '1px solid #ddd' }} />
@@ -199,8 +205,58 @@ export default function NewItemPage() {
                 ))}
               </div>
             )}
-            <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '10px' }}>※1枚目が一覧画面に表示される代表写真になります。</p>
+            <p style={{ fontSize: '0.8rem', color: '#666' }}>※1枚目が一覧画面に表示される代表写真になります。</p>
+
+            {/* ★追加：AI判定ボタン（画像が選ばれている時だけ表示される） */}
+            {imageFiles.length > 0 && (
+              <button
+                type="button"
+                onClick={handleAIAnalysis}
+                disabled={isAnalyzing}
+                style={{
+                  marginTop: '15px',
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#10b981', // 視覚的に分かりやすい緑色
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontWeight: 'bold',
+                  fontSize: '1rem',
+                  cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              >
+                {isAnalyzing ? '🔄 AIが画像を解析中...' : '✨ AIで品名を自動判定する'}
+              </button>
+            )}
           </div>
+
+          {/* 自動入力される「品名」欄 */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>品名（名称） *</label>
+            <input 
+              type="text" 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              required 
+              placeholder="写真をアップロードしてAI判定を押すと自動入力されます"
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: name ? '#f0fdf4' : 'white' }} 
+            />
+          </div>
+
+          {/* カテゴリー選択 */}
+          <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', fontSize: '0.9rem', color: '#0070f3' }}>詳細カテゴリー分類 *</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <select value={mainCategory} onChange={(e) => { setMainCategory(e.target.value); setSubCategory(''); setItemType(''); }} required style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}><option value="">大分類を選択</option>{mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
+              <select value={subCategory} onChange={(e) => { setSubCategory(e.target.value); setItemType(''); }} required disabled={!mainCategory} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: !mainCategory ? '#eee' : 'white' }}><option value="">中分類を選択</option>{subCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
+              <select value={itemType} onChange={(e) => setItemType(e.target.value)} required disabled={!subCategory} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: !subCategory ? '#eee' : 'white' }}><option value="">小分類を選択</option>{itemTypes.map(type => <option key={type} value={type}>{type}</option>)}</select>
+            </div>
+          </div>
+
+          <div><label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>拾得日時 *</label><input type="datetime-local" value={foundAt} onChange={(e) => setFoundAt(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+          <div><label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>拾得場所 *</label><input type="text" value={location} onChange={(e) => setLocation(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
 
           <div><label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>詳細説明・メモ（任意）</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', resize: 'vertical' }} /></div>
 
