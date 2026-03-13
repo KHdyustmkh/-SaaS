@@ -23,7 +23,11 @@ export default function DashboardPage() {
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUrgentModal, setShowUrgentModal] = useState(false);
-  const [showNotificationPopup, setShowNotificationPopup] = useState(false); // 【追加】ベルマーク用
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+  
+  // 【追加】検索・フィルター用のステート
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deadlineFilter, setDeadlineFilter] = useState('all'); // all, urgent, expired
   
   const [profileInfo, setProfileInfo] = useState<{
     displayName: string | null;
@@ -96,17 +100,18 @@ export default function DashboardPage() {
     return { label: `あと${remaining}日`, color: '#34c759', isUrgent: false, remaining };
   };
 
-  const urgentItems = useMemo(() => {
+  // 【維持】通知用：緊急アイテムの抽出
+  const urgentItemsForNotify = useMemo(() => {
     return items
       .filter(item => getDeadlineInfo(item)?.isUrgent)
       .map(item => ({ ...item, deadline: getDeadlineInfo(item) }));
   }, [items]);
 
-  const urgentItemsCount = urgentItems.length;
+  const urgentItemsCount = urgentItemsForNotify.length;
 
   const extremelyUrgentCount = useMemo(() => {
-    return urgentItems.filter(item => (item.deadline?.remaining ?? 99) <= 1).length;
-  }, [urgentItems]);
+    return urgentItemsForNotify.filter(item => (item.deadline?.remaining ?? 99) <= 1).length;
+  }, [urgentItemsForNotify]);
 
   useEffect(() => {
     if (!loading && extremelyUrgentCount > 0) {
@@ -114,15 +119,34 @@ export default function DashboardPage() {
     }
   }, [loading, extremelyUrgentCount]);
 
+  // 【追加・修正】検索とフィルターを適用したアイテムリスト
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      // 1. キーワード検索 (名称 or 管理番号)
+      const matchesQuery = 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (item.management_number && item.management_number.includes(searchQuery));
+      
+      if (!matchesQuery) return false;
+
+      // 2. 期限フィルター
+      const deadline = getDeadlineInfo(item);
+      if (deadlineFilter === 'urgent') return deadline?.isUrgent === true;
+      if (deadlineFilter === 'expired') return (deadline?.remaining ?? 99) <= 0;
+      
+      return true;
+    });
+  }, [items, searchQuery, deadlineFilter]);
+
   const groupedItems = useMemo(() => {
     const definedStatuses = ['引き渡し済', '回収済', '廃棄済'];
     return {
-      保管中: items.filter(item => !item.status || item.status === '保管中' || !definedStatuses.includes(item.status)),
-      引き渡し済: items.filter(item => item.status === '引き渡し済'),
-      回収済: items.filter(item => item.status === '回収済'),
-      廃棄済: items.filter(item => item.status === '廃棄済'),
+      保管中: filteredItems.filter(item => !item.status || item.status === '保管中' || !definedStatuses.includes(item.status)),
+      引き渡し済: filteredItems.filter(item => item.status === '引き渡し済'),
+      回収済: filteredItems.filter(item => item.status === '回収済'),
+      廃棄済: filteredItems.filter(item => item.status === '廃棄済'),
     };
-  }, [items]);
+  }, [filteredItems]);
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
 
@@ -167,7 +191,6 @@ export default function DashboardPage() {
           </div>
           
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', position: 'relative' }}>
-            {/* 【追加】通知ベルマーク */}
             <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowNotificationPopup(!showNotificationPopup)}>
               <span style={{ fontSize: '1.4rem' }}>🔔</span>
               {urgentItemsCount > 0 && (
@@ -176,15 +199,14 @@ export default function DashboardPage() {
                 </span>
               )}
               
-              {/* 【追加】通知ドロップダウンメニュー */}
               {showNotificationPopup && (
                 <div style={{ position: 'absolute', top: '35px', right: '0', width: '280px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', border: '1px solid #d2d2d7', zIndex: 500, overflow: 'hidden' }}>
                   <div style={{ padding: '12px', borderBottom: '1px solid #f5f5f7', fontWeight: '700', fontSize: '0.85rem' }}>通知詳細</div>
                   <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {urgentItems.length === 0 ? (
+                    {urgentItemsForNotify.length === 0 ? (
                       <div style={{ padding: '20px', fontSize: '0.75rem', color: '#86868b', textAlign: 'center' }}>現在、緊急の通知はありません。</div>
                     ) : (
-                      urgentItems.map(item => (
+                      urgentItemsForNotify.map(item => (
                         <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ padding: '12px', borderBottom: '1px solid #f5f5f7', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}>
                           <div style={{ fontSize: '0.75rem', fontWeight: '700', color: item.deadline?.color }}>⚠️ {item.deadline?.label}</div>
                           <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1d1d1f' }}>{item.name}</div>
@@ -214,6 +236,29 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* 【追加】ハイブリッド検索・フィルターバー */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#86868b' }}>🔍</span>
+            <input 
+              type="text" 
+              placeholder="品名、管理番号で検索..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', padding: '10px 10px 10px 35px', borderRadius: '8px', border: '1px solid #d2d2d7', fontSize: '0.9rem', outline: 'none' }}
+            />
+          </div>
+          <select 
+            value={deadlineFilter}
+            onChange={(e) => setDeadlineFilter(e.target.value)}
+            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #d2d2d7', fontSize: '0.9rem', outline: 'none', backgroundColor: 'white', minWidth: '130px' }}
+          >
+            <option value="all">すべての期限</option>
+            <option value="urgent">緊急 (残り2日以内)</option>
+            <option value="expired">期限切れ</option>
+          </select>
+        </div>
+
         {(Object.entries(groupedItems) as [string, LostItem[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', borderBottom: '1px solid #d2d2d7', paddingBottom: '10px' }}>
@@ -223,7 +268,7 @@ export default function DashboardPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '15px' }}>
               {list.length === 0 ? (
-                <div style={{ color: '#86868b', fontSize: '0.85rem', padding: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px dashed #d2d2d7', textAlign: 'center', gridColumn: '1 / -1' }}>アイテムはありません</div>
+                <div style={{ color: '#86868b', fontSize: '0.85rem', padding: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px dashed #d2d2d7', textAlign: 'center', gridColumn: '1 / -1' }}>該当するアイテムはありません</div>
               ) : (
                 list.map((item) => {
                   const deadline = getDeadlineInfo(item);
