@@ -1,15 +1,17 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, use } from 'react'; // use を追加
 import { useRouter, useParams } from 'next/navigation';
 
 export default function ItemDetailPage() {
   const params = useParams();
-  const id = params?.id;
+  // ★重要：params.id を確実に文字列として取得するための処理
+  const id = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
+  
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false); // 更新中フラグ
+  const [updating, setUpdating] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const router = useRouter();
 
@@ -20,19 +22,31 @@ export default function ItemDetailPage() {
 
   // ステータス変更の処理
   const handleStatusChange = async (newStatus: string) => {
-    setUpdating(true);
-    const { error } = await supabase
-      .from('lost_items')
-      .update({ status: newStatus })
-      .eq('id', id);
-
-    if (error) {
-      alert('ステータスの更新に失敗しました: ' + error.message);
-    } else {
-      // 成功したら画面のデータを更新
-      setItem({ ...item, status: newStatus });
+    if (!id) {
+      alert('アイテムIDが正しく取得できていません。');
+      return;
     }
-    setUpdating(false);
+    
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('lost_items')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      } else {
+        // 成功したら画面のデータを更新
+        setItem((prev: any) => ({ ...prev, status: newStatus }));
+        // 画面全体を同期させるためにrefreshを推奨
+        router.refresh();
+      }
+    } catch (error: any) {
+      alert('ステータスの更新に失敗しました: ' + error.message);
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const allPhotos = useMemo(() => {
@@ -59,6 +73,7 @@ export default function ItemDetailPage() {
         .single();
 
       if (error || !data) {
+        console.error('Fetch Error:', error);
         router.push('/');
       } else {
         setItem(data);
@@ -111,7 +126,7 @@ export default function ItemDetailPage() {
                 <div style={{ color: '#888', fontSize: '0.9rem' }}>管理番号: {item.management_number}</div>
               </div>
 
-              {/* ステータス選択メニュー（ここが新規機能） */}
+              {/* ステータス選択メニュー */}
               <div style={{ textAlign: 'right' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#888', marginBottom: '5px' }}>ステータス変更</label>
                 <select 
