@@ -99,7 +99,6 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* ヘッダー：新規登録ボタンを完全に削除しました */}
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 15px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', maxWidth: '60%' }}>
@@ -121,7 +120,52 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         
-        {/* 警察届出アラート（維持） */}
+        {/* --- 修正箇所：タイトルエリアのレスポンシブ対応 --- */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '30px',
+          gap: '10px',
+          flexWrap: 'nowrap' // スマホでも横並びを維持
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 1, minWidth: 0 }}>
+            <span style={{ fontSize: '0.65rem', color: '#007aff', fontWeight: 'bold', letterSpacing: '0.1em', marginBottom: '2px', whiteSpace: 'nowrap' }}>DASHBOARD</span>
+            <h1 style={{ 
+              fontSize: 'clamp(0.9rem, 4.5vw, 1.8rem)', // 画面幅に合わせてサイズを自動調整
+              fontWeight: '900', 
+              color: '#1d1d1f', 
+              margin: 0, 
+              letterSpacing: '-0.04em',
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap', // 絶対に改行させない
+              overflow: 'hidden',
+              textOverflow: 'ellipsis' // 万が一溢れたら「...」にする
+            }}>
+              拾得物管理ポータル
+            </h1>
+          </div>
+          <button 
+            onClick={() => router.push('/items/new')} 
+            style={{ 
+              backgroundColor: '#007aff', 
+              color: 'white', 
+              padding: '8px 14px', 
+              borderRadius: '10px', 
+              border: 'none', 
+              fontWeight: 'bold', 
+              cursor: 'pointer', 
+              fontSize: 'clamp(0.7rem, 3vw, 0.85rem)', // ボタンの文字も自動調整
+              boxShadow: '0 4px 12px rgba(0,122,255,0.3)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0 // ボタンは絶対に潰さない
+            }}
+          >
+            + 新規登録
+          </button>
+        </div>
+
+        {/* 警察届出アラート */}
         {urgentItemsCount > 0 && (
           <div style={{ backgroundColor: '#fff2f2', border: '1px solid #ff3b30', borderRadius: '12px', padding: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '1.5rem' }}>⚠️</span>
@@ -132,7 +176,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* リスト表示（変更なし） */}
+        {/* リスト表示 */}
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', borderBottom: '1px solid #d2d2d7', paddingBottom: '10px' }}>
