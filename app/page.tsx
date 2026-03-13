@@ -15,14 +15,12 @@ export default function DashboardPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // ログアウト処理
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();
   };
 
-  // データを取得するメイン関数
   const fetchItems = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -78,12 +76,22 @@ export default function DashboardPage() {
           <div style={{ fontSize: '0.85rem', color: '#86868b' }}>
             ログイン中: <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{userEmail}</span>
           </div>
-          <button 
-            onClick={handleLogout}
-            style={{ backgroundColor: 'transparent', border: '1px solid #d2d2d7', padding: '6px 14px', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer', color: '#ff3b30', fontWeight: '600' }}
-          >
-            ログアウト
-          </button>
+          
+          {/* マイページとログアウトのボタングループ */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button 
+              onClick={() => router.push('/mypage')}
+              style={{ backgroundColor: '#f5f5f7', border: '1px solid #d2d2d7', padding: '6px 14px', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', color: '#1d1d1f', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              👤 マイページ
+            </button>
+            <button 
+              onClick={handleLogout}
+              style={{ backgroundColor: 'transparent', border: '1px solid #d2d2d7', padding: '6px 14px', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer', color: '#ff3b30', fontWeight: '600' }}
+            >
+              ログアウト
+            </button>
+          </div>
         </div>
       </div>
 
