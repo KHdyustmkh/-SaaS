@@ -1,12 +1,12 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
-import { useEffect, useState, useMemo, use } from 'react'; // use を追加
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
 export default function ItemDetailPage() {
   const params = useParams();
-  // ★重要：params.id を確実に文字列として取得するための処理
+  // IDを確実に文字列として取得
   const id = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
   
   const [item, setItem] = useState<any>(null);
@@ -39,11 +39,11 @@ export default function ItemDetailPage() {
       } else {
         // 成功したら画面のデータを更新
         setItem((prev: any) => ({ ...prev, status: newStatus }));
-        // 画面全体を同期させるためにrefreshを推奨
         router.refresh();
       }
     } catch (error: any) {
-      alert('ステータスの更新に失敗しました: ' + error.message);
+      // SQLでの制約更新が漏れている場合、ここでエラーが表示されます
+      alert('ステータスの更新に失敗しました。DBの制約設定を確認してください: ' + error.message);
     } finally {
       setUpdating(false);
     }
@@ -126,7 +126,7 @@ export default function ItemDetailPage() {
                 <div style={{ color: '#888', fontSize: '0.9rem' }}>管理番号: {item.management_number}</div>
               </div>
 
-              {/* ステータス選択メニュー */}
+              {/* ステータス選択メニュー（4状態対応版） */}
               <div style={{ textAlign: 'right' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#888', marginBottom: '5px' }}>ステータス変更</label>
                 <select 
@@ -146,7 +146,8 @@ export default function ItemDetailPage() {
                 >
                   <option value="保管中">🔵 保管中</option>
                   <option value="引き渡し済">🟢 引き渡し済</option>
-                  <option value="回収・廃棄済">🔴 回収・廃棄済</option>
+                  <option value="回収済">🟡 回収済</option>
+                  <option value="廃棄済">🔴 廃棄済</option>
                 </select>
                 {updating && <div style={{ fontSize: '0.7rem', color: '#0070f3', marginTop: '4px' }}>更新中...</div>}
               </div>
