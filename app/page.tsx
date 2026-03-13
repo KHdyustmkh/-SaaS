@@ -99,7 +99,7 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* 【唯一のボタン配置場所】ヘッダー */}
+      {/* ヘッダー：新規登録ボタン1つのみを維持 */}
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 15px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', maxWidth: '40%' }}>
@@ -113,7 +113,6 @@ export default function DashboardPage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* ここが唯一の新規登録ボタンです */}
             <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', padding: '6px 12px', borderRadius: '8px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>+ 新規登録</button>
             <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: '1px solid #d2d2d7', padding: '5px 8px', borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', fontWeight: '600' }}>マイページ</button>
             <button onClick={handleLogout} style={{ backgroundColor: 'transparent', border: '1px solid #d2d2d7', padding: '5px 8px', borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', color: '#ff3b30', fontWeight: '600' }}>ログアウト</button>
@@ -123,19 +122,7 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         
-        {/* タイトルエリア：不要なボタンと英語を削除し、指定の改行のみ適用 */}
-        <div style={{ marginBottom: '30px' }}>
-          <h1 style={{ 
-            fontSize: 'clamp(1.5rem, 7vw, 2rem)', 
-            fontWeight: '900', 
-            color: '#1d1d1f', 
-            margin: 0, 
-            letterSpacing: '-0.04em',
-            lineHeight: 1.1
-          }}>
-            拾得物管理<br />ポータル
-          </h1>
-        </div>
+        {/* 指示に基づき、ここに存在したタイトルエリア（拾得物管理ポータル等）を完全に削除しました */}
 
         {/* 警察届出アラート */}
         {urgentItemsCount > 0 && (
@@ -148,7 +135,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* アイテムリスト（変更なし） */}
+        {/* アイテムリスト */}
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', borderBottom: '1px solid #d2d2d7', paddingBottom: '10px' }}>
