@@ -1,7 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next"; // Viewportを追加
 import "./globals.css";
 import Link from "next/link";
 import { LayoutDashboard, PlusCircle } from "lucide-react";
+
+// ★追加：拡大縮小を禁止する設定
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: "拾得物管理システム",
@@ -15,6 +23,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
+      {/* Next.jsが自動的にmetaタグを生成するため、
+        <head>内に手動でviewportを書く必要はありません。
+      */}
       <body style={{ margin: 0, backgroundColor: "#f8fafc" }}>
         {/* 固定ナビゲーションバー */}
         <nav style={{
