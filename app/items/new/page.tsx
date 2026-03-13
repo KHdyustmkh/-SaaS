@@ -3,7 +3,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
-// ★追加：先ほど作ったAI関数と変換関数を読み込む
+// ★インポートパス：環境に合わせて修正（@/ が動かない場合は ../../lib/... に書き換えてください）
 import { analyzeImage } from '@/lib/vision';
 import { convertToBase64 } from '@/lib/utils';
 
@@ -26,7 +26,7 @@ export default function NewItemPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // ★追加：AIが解析中かどうかを判定するステート
+  // AIが解析中かどうかを判定するステート
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // テキスト情報ステート
@@ -75,20 +75,15 @@ export default function NewItemPage() {
     setImagePreviews(newPreviews);
   };
 
-  // ★追加：AIで画像を解析して品名を自動入力する処理
+  // AIで画像を解析して品名を自動入力する処理
   const handleAIAnalysis = async () => {
     if (imageFiles.length === 0) return;
     
     setIsAnalyzing(true);
     try {
-      // 1枚目の写真をBase64に変換
       const base64 = await convertToBase64(imageFiles[0]);
-      // Google Vision APIに送信
       const aiResult = await analyzeImage(base64);
-      
-      // 結果を「品名」の入力欄に自動でセットする
       setName(aiResult);
-      
     } catch (error) {
       console.error("AI解析エラー:", error);
       alert('AIの判定に失敗しました。');
@@ -111,7 +106,6 @@ export default function NewItemPage() {
 
     try {
       const uploadedUrls: string[] = [];
-
       for (const file of imageFiles) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -132,7 +126,6 @@ export default function NewItemPage() {
 
       const primaryPhotoUrl = uploadedUrls.length > 0 ? uploadedUrls[0] : null;
       const secondaryPhotosUrl = uploadedUrls.length > 1 ? uploadedUrls.slice(1).join(',') : null;
-
       const combinedCategory = `${mainCategory} / ${subCategory} / ${itemType}`;
 
       const { error: dbError } = await supabase.from('lost_items').insert([
@@ -175,7 +168,7 @@ export default function NewItemPage() {
           
           <div><label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>管理番号 *</label><input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           
-          {/* 画像アップロード領域（AIボタンを目立たせるために上に移動しました） */}
+          {/* 画像アップロード領域 */}
           <div style={{ padding: '15px', border: '2px dashed #ccc', borderRadius: '8px', backgroundColor: '#fafafa' }}>
             <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', fontSize: '0.9rem' }}>
               写真の添付（最大5枚まで）
@@ -183,6 +176,7 @@ export default function NewItemPage() {
             <input 
               type="file" 
               accept="image/*" 
+              capture="environment" /* ★追加：スマホで背面カメラを直接起動 */
               multiple 
               onChange={handleImageChange} 
               disabled={imageFiles.length >= 5}
@@ -207,7 +201,6 @@ export default function NewItemPage() {
             )}
             <p style={{ fontSize: '0.8rem', color: '#666' }}>※1枚目が一覧画面に表示される代表写真になります。</p>
 
-            {/* ★追加：AI判定ボタン（画像が選ばれている時だけ表示される） */}
             {imageFiles.length > 0 && (
               <button
                 type="button"
@@ -217,7 +210,7 @@ export default function NewItemPage() {
                   marginTop: '15px',
                   width: '100%',
                   padding: '12px',
-                  backgroundColor: '#10b981', // 視覚的に分かりやすい緑色
+                  backgroundColor: '#10b981',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -232,7 +225,6 @@ export default function NewItemPage() {
             )}
           </div>
 
-          {/* 自動入力される「品名」欄 */}
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem' }}>品名（名称） *</label>
             <input 
@@ -245,7 +237,6 @@ export default function NewItemPage() {
             />
           </div>
 
-          {/* カテゴリー選択 */}
           <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
             <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', fontSize: '0.9rem', color: '#0070f3' }}>詳細カテゴリー分類 *</label>
             <div style={{ display: 'flex', gap: '10px' }}>
