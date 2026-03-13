@@ -103,28 +103,28 @@ function ListContent() {
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        {/* 【修正箇所】はみ出さないように box-sizing と width を調整 */}
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        {/* 【修正】検索窓の最大幅を maxWidth: '400px' で固定 */}
+        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input 
             type="text" 
-            placeholder="このリスト内を検索..." 
+            placeholder="リスト内を検索..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ 
-              flex: '1 1 200px', // 幅が足りない時は200pxを維持しつつ伸び縮み
-              minWidth: '0',      // flexコンテナ内での予期せぬはみ出しを防止
+              width: '100%',
+              maxWidth: '400px', // ★ここを調整しました。長すぎる場合はここを300px等にしてください
               padding: '12px', 
               borderRadius: '10px', 
               border: '1px solid #d2d2d7', 
               outline: 'none',
-              boxSizing: 'border-box' // パディングを幅に含める設定
+              boxSizing: 'border-box'
             }}
           />
           <select 
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
             style={{ 
-              flex: '0 0 150px', // プルダウンの幅は150pxで固定
+              width: '160px', 
               padding: '12px', 
               borderRadius: '10px', 
               border: '1px solid #d2d2d7', 
