@@ -82,115 +82,74 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* --- ヘッダーエリア --- */}
-      <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '12px 15px', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            
-            {/* ログイン情報エリア */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxWidth: '60%' }}>
-              {profileInfo.displayName && (
-                <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  👤 {profileInfo.displayName}
-                </div>
-              )}
-              <div style={{ fontSize: '0.65rem', color: '#86868b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                ✉️ {profileInfo.email}
-              </div>
+      {/* --- ヘッダーエリア (画像に基づき修正) --- */}
+      <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          
+          {/* 左側：アイコン + タイトル + ダッシュボードタグ */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 1, overflow: 'hidden' }}>
+            <div style={{ backgroundColor: '#2c52e1', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: 'white', fontSize: '1.2rem' }}>⊞</span>
             </div>
-            
-            {/* ボタン群 */}
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button 
-                onClick={() => router.push('/mypage')}
-                style={{ backgroundColor: '#f5f5f7', border: '1px solid #d2d2d7', padding: '6px 8px', borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', color: '#1d1d1f', fontWeight: '600' }}
-              >
-                マイページ
-              </button>
-              <button 
-                onClick={handleLogout}
-                style={{ backgroundColor: 'transparent', border: '1px solid #d2d2d7', padding: '6px 8px', borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', color: '#ff3b30', fontWeight: '600' }}
-              >
-                ログアウト
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f5f5f7', borderRadius: '10px', padding: '4px 10px', gap: '8px', border: '1px solid #e5e5e7' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#1d1d1f', whiteSpace: 'nowrap' }}>拾得物管理ポータル</span>
+              <div style={{ width: '1px', height: '14px', backgroundColor: '#d2d2d7' }}></div>
+              <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#86868b', whiteSpace: 'nowrap' }}>ダッシュボード</span>
             </div>
           </div>
+
+          {/* 右側：新規登録ボタン (画像を参考に青背景白抜き) */}
+          <button 
+            onClick={() => router.push('/items/new')}
+            style={{ backgroundColor: '#2c52e1', color: 'white', padding: '8px 14px', borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>⊕</span> 新規登録
+          </button>
         </div>
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
         
-        {/* --- タイトルエリア (スマホ最適化版) --- */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: '25px', 
-          gap: '10px' 
-        }}>
-          <h1 style={{ 
-            fontSize: 'clamp(1.1rem, 4.5vw, 1.8rem)', // 文字がはみ出さないサイズに微調整
-            fontWeight: '800', 
-            color: '#1d1d1f', 
-            margin: 0, 
-            letterSpacing: '-0.03em', 
-            lineHeight: '1.2',
-            wordBreak: 'keep-all' // 「拾得物」などの単語の途中で改行させない
-          }}>
-            拾得物管理<span style={{ display: 'inline-block' }}>ポータル</span>
-          </h1>
-          <button 
-            onClick={() => router.push('/items/new')} 
-            style={{ 
-              backgroundColor: '#007aff', 
-              color: 'white', 
-              padding: '8px 16px', 
-              borderRadius: '10px', 
-              border: 'none', 
-              fontWeight: 'bold', 
-              cursor: 'pointer', 
-              boxShadow: '0 4px 12px rgba(0,122,255,0.3)', 
-              fontSize: '0.9rem',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            + 新規
-          </button>
+        {/* --- ユーザー情報エリア (現在のデザインを維持) --- */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxWidth: '60%' }}>
+            {profileInfo.displayName && (
+              <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1d1d1f' }}>👤 {profileInfo.displayName}</div>
+            )}
+            <div style={{ fontSize: '0.75rem', color: '#86868b' }}>✉️ {profileInfo.email}</div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: '1px solid #d2d2d7', padding: '6px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600' }}>マイページ</button>
+            <button onClick={handleLogout} style={{ backgroundColor: 'transparent', border: '1px solid #d2d2d7', padding: '6px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600', color: '#ff3b30' }}>ログアウト</button>
+          </div>
         </div>
 
-        {/* --- リスト表示部分 --- */}
+        {/* --- 以下、リスト表示エリア (現状の良さを維持) --- */}
+        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          拾得物管理ポータル
+          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', border: 'none' }}>+ 新規</button>
+        </h1>
+
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '35px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', borderBottom: '1px solid #d2d2d7', paddingBottom: '8px' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0, color: '#1d1d1f' }}>{status}</h2>
-              <span style={{ backgroundColor: '#86868b', color: 'white', padding: '1px 8px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' }}>
-                {list.length}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px', borderBottom: '1px solid #d2d2d7', paddingBottom: '8px' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>{status}</h2>
+              <span style={{ backgroundColor: '#86868b', color: 'white', padding: '2px 8px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' }}>{list.length}</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
               {list.length === 0 ? (
-                <div style={{ color: '#86868b', fontSize: '0.8rem', padding: '15px', backgroundColor: '#fff', borderRadius: '12px', border: '1px dashed #d2d2d7', textAlign: 'center', gridColumn: '1 / -1' }}>
-                  アイテムはありません
-                </div>
+                <div style={{ color: '#86868b', fontSize: '0.85rem', padding: '20px', backgroundColor: 'white', borderRadius: '12px', border: '1px dashed #d2d2d7', textAlign: 'center', gridColumn: '1 / -1' }}>アイテムはありません</div>
               ) : (
                 list.map((item) => (
-                  <div 
-                    key={item.id} 
-                    onClick={() => router.push(`/items/${item.id}`)} 
-                    style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer' }}
-                  >
-                    <div style={{ width: '100%', height: '120px', backgroundColor: '#f5f5f7' }}>
-                      {item.photo_url ? (
-                        <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#d2d2d7', fontSize: '1.5rem' }}>📦</div>
-                      )}
+                  <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
+                    <div style={{ width: '100%', height: '140px', backgroundColor: '#f5f5f7' }}>
+                      {item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#d2d2d7', fontSize: '2rem' }}>📦</div>}
                     </div>
-                    <div style={{ padding: '10px' }}>
-                      <div style={{ fontSize: '0.6rem', color: '#007aff', fontWeight: '700', marginBottom: '2px' }}>{item.category}</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '700', marginBottom: '4px', color: '#1d1d1f', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.4em' }}>{item.name}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#86868b' }}>#{item.management_number}</div>
+                    <div style={{ padding: '12px' }}>
+                      <div style={{ fontSize: '0.65rem', color: '#007aff', fontWeight: '700', marginBottom: '4px' }}>{item.category}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1d1d1f' }}>{item.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#86868b' }}>#{item.management_number}</div>
                     </div>
                   </div>
                 ))
