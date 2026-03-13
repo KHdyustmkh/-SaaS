@@ -55,11 +55,14 @@ export default function MyPage() {
     setSaving(false);
   };
 
-  // ログアウト処理
+  // --- 修正箇所：ログアウト前に確認ポップアップを表示 ---
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
+    const confirmed = window.confirm('本当にログアウトしてよろしいですか？');
+    if (confirmed) {
+      await supabase.auth.signOut();
+      router.push('/login');
+      router.refresh();
+    }
   };
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
@@ -102,7 +105,6 @@ export default function MyPage() {
           </div>
         </section>
 
-        {/* ログアウト専用セクション：今回追加した箇所 */}
         <section style={{ backgroundColor: 'white', borderRadius: '18px', padding: '25px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
           <button 
             onClick={handleLogout}
