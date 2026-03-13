@@ -82,7 +82,7 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* 1. 青枠で囲まれたヘッダー（ここだけを表示） */}
+      {/* 【最上部ヘッダー：青枠】これ以外のヘッダー要素は一切含めない */}
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 12px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           
@@ -91,24 +91,10 @@ export default function DashboardPage() {
               <span style={{ color: 'white', fontSize: '1rem' }}>⊞</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-              <span style={{ 
-                fontSize: 'clamp(0.65rem, 3.2vw, 0.95rem)', 
-                fontWeight: '800', 
-                color: '#1d1d1f', 
-                whiteSpace: 'nowrap'
-              }}>
+              <span style={{ fontSize: 'clamp(0.65rem, 3.2vw, 0.95rem)', fontWeight: '800', color: '#1d1d1f', whiteSpace: 'nowrap' }}>
                 拾得物管理ポータル
               </span>
-              <div style={{ 
-                backgroundColor: '#f5f5f7', 
-                padding: '3px 6px', 
-                borderRadius: '5px', 
-                border: '1px solid #d2d2d7',
-                fontSize: 'clamp(0.55rem, 2.8vw, 0.75rem)', 
-                fontWeight: '600', 
-                color: '#48484a', 
-                whiteSpace: 'nowrap'
-              }}>
+              <div style={{ backgroundColor: '#f5f5f7', padding: '3px 6px', borderRadius: '5px', border: '1px solid #d2d2d7', fontSize: 'clamp(0.55rem, 2.8vw, 0.75rem)', fontWeight: '600', color: '#48484a', whiteSpace: 'nowrap' }}>
                 ダッシュボード
               </div>
             </div>
@@ -122,7 +108,7 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
         
-        {/* 2. ユーザー情報・マイページ・ログアウト */}
+        {/* ユーザー情報とマイページ/ログアウトのみ */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>👤 {profileInfo.displayName}</div>
@@ -134,7 +120,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 3. 警察届出アラート */}
+        {/* 警察届出アラート */}
         {urgentItemsCount > 0 && (
           <div style={{ backgroundColor: '#fff2f2', border: '1px solid #ff3b30', borderRadius: '12px', padding: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '1.2rem' }}>⚠️</span>
@@ -145,12 +131,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 【削除完了】
-           画像[2026-03-13 (25).jpg]の黄色い枠の部分を完全に消去しました。
-           ここにあった「拾得物管理ポータル」のタイトルと、青い「＋新規」ボタンのブロックは存在しません。
-        */}
+        {/* ここにあった「拾得物管理ポータル」タイトルと「＋新規」ボタンは完全に削除しました */}
 
-        {/* 4. アイテムリスト */}
+        {/* アイテムリスト */}
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '30px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', borderBottom: '1px solid #d2d2d7', paddingBottom: '6px' }}>
