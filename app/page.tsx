@@ -82,7 +82,7 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* --- 青枠：最上部ヘッダー (改行防止策適用済み) --- */}
+      {/* --- 【青枠】最上部ヘッダー (スマホでの改行を徹底防御) --- */}
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 12px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           
@@ -90,9 +90,9 @@ export default function DashboardPage() {
             <div style={{ backgroundColor: '#2c52e1', padding: '6px', borderRadius: '8px', display: 'flex', flexShrink: 0 }}>
               <span style={{ color: 'white', fontSize: '1rem' }}>⊞</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
               <span style={{ 
-                fontSize: 'clamp(0.7rem, 3.2vw, 0.95rem)', 
+                fontSize: 'clamp(0.65rem, 3.2vw, 0.95rem)', 
                 fontWeight: '800', 
                 color: '#1d1d1f', 
                 whiteSpace: 'nowrap'
@@ -101,12 +101,12 @@ export default function DashboardPage() {
               </span>
               <div style={{ 
                 backgroundColor: '#f5f5f7', 
-                padding: '4px 8px', 
-                borderRadius: '6px', 
+                padding: '3px 6px', 
+                borderRadius: '5px', 
                 border: '1px solid #d2d2d7',
-                fontSize: 'clamp(0.6rem, 2.8vw, 0.8rem)', 
+                fontSize: 'clamp(0.55rem, 2.8vw, 0.75rem)', 
                 fontWeight: '600', 
-                color: '#1d1d1f', 
+                color: '#48484a', 
                 whiteSpace: 'nowrap'
               }}>
                 ダッシュボード
@@ -114,7 +114,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#2c52e1', color: 'white', padding: '8px 12px', borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#2c52e1', color: 'white', padding: '8px 12px', borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
             ⊕ 新規登録
           </button>
         </div>
@@ -122,7 +122,7 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
         
-        {/* --- ユーザー情報表示 --- */}
+        {/* --- ユーザー情報 --- */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>👤 {profileInfo.displayName}</div>
@@ -134,7 +134,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* --- 警察届出アラート (期限が近い場合のみ表示) --- */}
+        {/* --- 警察届出アラート --- */}
         {urgentItemsCount > 0 && (
           <div style={{ backgroundColor: '#fff2f2', border: '1px solid #ff3b30', borderRadius: '12px', padding: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '1.2rem' }}>⚠️</span>
@@ -145,7 +145,10 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ★ 黄色い枠（重複タイトルと新規ボタン）の記述を完全に削除しました ★ */}
+        {/* 【修正の核心】
+           以前ここに存在していた「拾得物管理ポータル」のh1タグと
+           「+ 新規」ボタンのコード（黄色の枠部分）を完全に削除しました。
+        */}
 
         {/* --- ステータス別アイテムリスト --- */}
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
