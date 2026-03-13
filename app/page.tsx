@@ -53,20 +53,21 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
       
-      {/* 1. 最上部ヘッダー（青枠）: ここだけにタイトルと新規ボタンを集約 */}
+      {/* 1. 【唯一のヘッダー：青枠】これ以外のヘッダー・タイトル行は一切存在させません */}
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 12px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-            <div style={{ backgroundColor: '#2c52e1', padding: '6px', borderRadius: '8px', flexShrink: 0 }}><span style={{ color: 'white' }}>⊞</span></div>
-            <span style={{ fontSize: 'clamp(0.65rem, 3.2vw, 0.95rem)', fontWeight: '800', whiteSpace: 'nowrap' }}>拾得物管理ポータル</span>
-            <div style={{ backgroundColor: '#f5f5f7', padding: '3px 6px', borderRadius: '5px', border: '1px solid #d2d2d7', fontSize: 'clamp(0.55rem, 2.8vw, 0.75rem)', fontWeight: '600' }}>ダッシュボード</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ backgroundColor: '#2c52e1', padding: '6px', borderRadius: '8px' }}><span style={{ color: 'white' }}>⊞</span></div>
+            <span style={{ fontSize: 'clamp(0.65rem, 3.2vw, 0.95rem)', fontWeight: '800' }}>拾得物管理ポータル</span>
+            <div style={{ backgroundColor: '#f5f5f7', padding: '3px 6px', borderRadius: '5px', border: '1px solid #d2d2d7', fontSize: '0.7rem' }}>ダッシュボード</div>
           </div>
-          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#2c52e1', color: 'white', padding: '8px 12px', borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>⊕ 新規登録</button>
+          {/* ボタンはここ（青枠内）だけに集約 */}
+          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#2c52e1', color: 'white', padding: '8px 12px', borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '0.8rem' }}>⊕ 新規登録</button>
         </div>
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
-        {/* 2. ユーザー情報 */}
+        {/* 2. ユーザー情報セクション */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
             <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>👤 {profileInfo.displayName}</div>
@@ -89,9 +90,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 【ここにあった2段目のタイトルとボタン（黄色枠）を物理的に完全抹消しました】 */}
-
-        {/* 4. アイテムリスト */}
+        {/* 4. アイテムリスト：ヘッダーのすぐ下に直接リストを開始 */}
         {Object.entries(groupedItems).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '30px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', borderBottom: '1px solid #d2d2d7', paddingBottom: '6px' }}>
