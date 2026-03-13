@@ -82,7 +82,7 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* --- 【青枠】最上部ヘッダー (スマホでの改行を徹底防御) --- */}
+      {/* --- 【青枠】ヘッダーエリア：ここだけを残します --- */}
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 12px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           
@@ -122,7 +122,7 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
         
-        {/* --- ユーザー情報 --- */}
+        {/* --- ユーザー情報エリア --- */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>👤 {profileInfo.displayName}</div>
@@ -145,12 +145,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 【修正の核心】
-           以前ここに存在していた「拾得物管理ポータル」のh1タグと
-           「+ 新規」ボタンのコード（黄色の枠部分）を完全に削除しました。
-        */}
+        {/* 【重要】黄色い枠で囲まれた「2段目のタイトル行」はここから完全に消去されました */}
 
-        {/* --- ステータス別アイテムリスト --- */}
+        {/* --- 拾得物リスト --- */}
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '30px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', borderBottom: '1px solid #d2d2d7', paddingBottom: '6px' }}>
