@@ -8,22 +8,29 @@ export default function DashboardPage() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 【ステップ3：厳格化】データを取得するメイン関数
+  // ログアウト処理
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
+
+  // データを取得するメイン関数
   const fetchItems = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push('/login');
       return;
     }
+    setUserEmail(user.email ?? null);
 
-    // select('*', { count: 'exact' }) を追加し、DBの最新実数を強制的に計算させます
-    // これにより、削除済みのデータがキャッシュから読み込まれるのを防ぎます
     const { data, error } = await supabase
       .from('lost_items')
       .select('*', { count: 'exact' }) 
@@ -36,11 +43,8 @@ export default function DashboardPage() {
   }, [supabase, router]);
 
   useEffect(() => {
-    // 初回読み込み
     fetchItems();
     
-    // 【同期補強】詳細画面から戻ってきた際や、タブを切り替えて戻った際に
-    // 画面のフォーカスを検知してバックグラウンドで再取得を実行します
     const handleFocus = () => {
       fetchItems();
     };
@@ -49,7 +53,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [fetchItems]);
 
-  // アイテムのステータス別振り分け（古いデータの救済ロジック継続）
   const groupedItems = useMemo(() => {
     const definedStatuses = ['引き渡し済', '回収済', '廃棄済'];
 
@@ -65,13 +68,28 @@ export default function DashboardPage() {
     };
   }, [items]);
 
-  if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>最新の情報を取得中...</div>;
+  if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
 
   return (
-    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: 'sans-serif' }}>
+      {/* ログイン情報・ヘッダーエリア */}
+      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 20px', marginBottom: '30px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '0.85rem', color: '#86868b' }}>
+            ログイン中: <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{userEmail}</span>
+          </div>
+          <button 
+            onClick={handleLogout}
+            style={{ backgroundColor: 'transparent', border: '1px solid #d2d2d7', padding: '6px 14px', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer', color: '#ff3b30', fontWeight: '600' }}
+          >
+            ログアウト
+          </button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: '800', color: '#1d1d1f' }}>拾得物管理ポータル</h1>
+          <h1 style={{ fontSize: '2rem', fontWeight: '800', color: '#1d1d1f', margin: 0 }}>拾得物管理ポータル</h1>
           <button 
             onClick={() => router.push('/items/new')} 
             style={{ backgroundColor: '#007aff', color: 'white', padding: '12px 28px', borderRadius: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,122,255,0.3)' }}
