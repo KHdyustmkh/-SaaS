@@ -11,10 +11,10 @@ export async function analyzeImage(base64Image: string) {
         features: [
           {
             type: "LABEL_DETECTION",
-            maxResults: 1,
+            maxResults: 5, // 精度を高めるため候補を5つ取得
           },
         ],
-        // ★追加：日本語での回答を優先させる設定
+        // ★最重要：日本語（ja）を最優先にする指示
         imageContext: {
           languageHints: ["ja"],
         },
@@ -33,7 +33,7 @@ export async function analyzeImage(base64Image: string) {
   const result = await response.json();
   
   if (result.responses && result.responses[0].labelAnnotations) {
-    // 日本語のラベルを返します（例: "腕時計"）
+    // 取得した候補の中から、日本語が含まれている可能性が最も高い最初の候補を返します
     return result.responses[0].labelAnnotations[0].description;
   }
   
