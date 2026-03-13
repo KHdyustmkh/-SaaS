@@ -102,66 +102,62 @@ function ListContent() {
         </div>
       </header>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
-        {/* --- 修正の要：操作エリアの構造刷新 --- */}
-        <div style={{ 
-          marginBottom: '24px', 
-          display: 'flex', 
-          flexDirection: 'column', // 基本は縦並び（スマホ用）
-          gap: '12px' 
-        }}>
-          {/* PCサイズ（768px以上）のみ横並びにするためのラッパー代わり */}
-          <div style={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: '12px',
-            alignItems: 'center'
-          }}>
+      {/* コンテンツエリア */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px', boxSizing: 'border-box' }}>
+        
+        {/* 操作エリア：絶対に重ならない「縦積み」構造 */}
+        <div style={{ marginBottom: '24px', display: 'block' }}>
+          
+          {/* 1. 検索窓：幅を固定せず、親の範囲に収める */}
+          <div style={{ marginBottom: '12px' }}>
             <input 
               type="text" 
-              placeholder="リスト内を検索..." 
+              placeholder="検索..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ 
-                width: '100%',     // スマホでは全幅
-                maxWidth: '320px', // PCでも伸びすぎない
+                width: '100%',     // 親要素（背景）の幅に合わせる
+                maxWidth: '400px', // ただしPCでも400px以上には広げない
                 padding: '12px', 
                 borderRadius: '10px', 
                 border: '1px solid #d2d2d7', 
-                fontSize: '16px',   // スマホでズームされないためのサイズ
+                fontSize: '16px', 
                 outline: 'none',
-                boxSizing: 'border-box',
-                backgroundColor: 'white'
+                boxSizing: 'border-box', // ★パディングではみ出さない設定
+                display: 'block'
               }}
             />
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.8rem', color: '#86868b', whiteSpace: 'nowrap' }}>並び替え:</span>
-              <select 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                style={{ 
-                  width: '160px', 
-                  padding: '10px', 
-                  borderRadius: '10px', 
-                  border: '1px solid #d2d2d7', 
-                  backgroundColor: 'white', 
-                  cursor: 'pointer', 
-                  outline: 'none',
-                  fontSize: '0.9rem',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <option value="deadline">期限が近い順</option>
-                <option value="newest">登録が新しい順</option>
-                <option value="oldest">登録が古い順</option>
-              </select>
-            </div>
+          </div>
+          
+          {/* 2. 並び替え：検索窓とは別の行に配置（PCでも被らない） */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '0.8rem', color: '#86868b' }}>並び替え:</span>
+            <select 
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{ 
+                width: '160px', 
+                padding: '8px', 
+                borderRadius: '8px', 
+                border: '1px solid #d2d2d7', 
+                backgroundColor: 'white', 
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
+            >
+              <option value="deadline">期限が近い順</option>
+              <option value="newest">登録が新しい順</option>
+              <option value="oldest">登録が古い順</option>
+            </select>
           </div>
         </div>
-        {/* ------------------------------------- */}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+        {/* アイテムグリッド */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+          gap: '12px' 
+        }}>
           {sortedAndFilteredList.length === 0 ? (
             <div style={{ color: '#86868b', textAlign: 'center', gridColumn: '1 / -1', padding: '40px' }}>該当なし</div>
           ) : (
