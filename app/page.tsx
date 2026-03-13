@@ -8,7 +8,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  
+  // 表示名（施設名＋担当者名、またはメールアドレス）を管理する状態変数
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,7 +29,21 @@ export default function DashboardPage() {
       router.push('/login');
       return;
     }
-    setUserEmail(user.email ?? null);
+    
+    // マイページで設定した情報を取得し、表示名を決定する
+    const facilityName = user.user_metadata?.facility_name?.trim();
+    const managerName = user.user_metadata?.manager_name?.trim();
+    
+    if (facilityName || managerName) {
+      // 施設名と担当者名が設定されている場合は結合して表示
+      const nameParts = [];
+      if (facilityName) nameParts.push(facilityName);
+      if (managerName) nameParts.push(managerName);
+      setDisplayName(nameParts.join(' '));
+    } else {
+      // どちらも未設定の場合はメールアドレスを表示
+      setDisplayName(user.email ?? null);
+    }
 
     const { data, error } = await supabase
       .from('lost_items')
@@ -74,7 +90,7 @@ export default function DashboardPage() {
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 20px', marginBottom: '30px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '0.85rem', color: '#86868b' }}>
-            ログイン中: <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{userEmail}</span>
+            ログイン中: <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{displayName}</span>
           </div>
           
           {/* マイページとログアウトのボタングループ */}
