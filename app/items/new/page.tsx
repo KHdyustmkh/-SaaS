@@ -60,24 +60,24 @@ export default function NewItemPage() {
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
+      
+      // AI自体に日本語で答えるよう指示し、結果を取得
       let aiResult = await analyzeImage(base64);
 
+      // 強制日本語変換マップ（拡充版）
       const forceJapaneseMap: { [key: string]: string } = {
-        "watch": "腕時計",
-        "wristwatch": "腕時計",
-        "ウォッチ": "腕時計",
-        "wallet": "財布類",
-        "財布": "財布類",
-        "bag": "ハンドバッグ",
-        "backpack": "リュックサック",
-        "smartphone": "スマートフォン",
-        "iphone": "スマートフォン",
-        "glasses": "めがね",
-        "key": "家鍵",
-        "umbrella": "雨傘"
+        "watch": "腕時計", "wristwatch": "腕時計", "clock": "時計", "ウォッチ": "腕時計",
+        "wallet": "財布", "purse": "財布", "billfold": "財布", "財布類": "財布",
+        "bag": "カバン", "handbag": "ハンドバッグ", "backpack": "リュックサック",
+        "smartphone": "スマートフォン", "iphone": "スマートフォン", "phone": "スマートフォン",
+        "glasses": "めがね", "eyeglasses": "めがね", "sunglasses": "サングラス",
+        "key": "鍵", "keys": "鍵", "keychain": "キーホルダー", "家鍵": "鍵",
+        "umbrella": "傘", "parasol": "日傘", "雨傘": "傘",
+        "card": "カードケース", "credit card": "カード",
+        "earbuds": "イヤホン", "headphones": "ヘッドホン"
       };
 
-      const lowerResult = aiResult.toLowerCase();
+      const lowerResult = aiResult.toLowerCase().trim();
       const targetName = forceJapaneseMap[lowerResult] || aiResult;
 
       let foundMain = "";
@@ -88,6 +88,7 @@ export default function NewItemPage() {
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
           for (const type of CATEGORY_TREE[main][sub]) {
+            // 日本語名とAI結果の部分一致を確認
             if (targetName.includes(type) || type.includes(targetName)) {
               foundMain = main;
               foundSub = sub;
@@ -102,9 +103,9 @@ export default function NewItemPage() {
         setMainCategory(foundMain);
         setSubCategory(foundSub);
         setItemType(foundType);
-        setName(foundType);
+        setName(foundType); // カテゴリーツリー内の日本語名をセット
       } else {
-        setName(aiResult);
+        setName(targetName); // 見つからない場合も日本語変換済みの名前をセット
       }
     } catch (error) {
       console.error("AI解析エラー:", error);
