@@ -4,11 +4,26 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 
+// Vercel(TypeScript)エラーを防ぐための型定義
+interface LostItem {
+  id: string;
+  name: string;
+  category: string;
+  location: string;
+  found_at: string;
+  status: string;
+  photo_url?: string;
+  management_number?: string;
+  reported_to_police_at?: string;
+  created_at: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showUrgentModal, setShowUrgentModal] = useState(false); // 【追加】ポップアップ用
+  const [showUrgentModal, setShowUrgentModal] = useState(false);
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false); // 【追加】ベルマーク用
   
   const [profileInfo, setProfileInfo] = useState<{
     displayName: string | null;
@@ -52,25 +67,11 @@ export default function DashboardPage() {
 
     const { data, error } = await supabase
       .from('lost_items')
-      .select('*', { count: 'exact' }) 
+      .select('*') 
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setItems(data);
-
-      // --- 【追加】残り1日以下の緊急アイテムがあるかチェック ---
-      const urgentItems = data.filter(item => {
-        if (item.status !== '保管中' || item.reported_to_police_at) return false;
-        const foundDate = new Date(item.found_at);
-        const today = new Date();
-        const diffTime = today.getTime() - foundDate.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        return (7 - diffDays) <= 1; // 残り1日以下
-      });
-
-      if (urgentItems.length > 0) {
-        setShowUrgentModal(true);
-      }
+      setItems(data as LostItem[]);
     }
     setLoading(false);
   }, [supabase, router]);
@@ -82,7 +83,7 @@ export default function DashboardPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [fetchItems]);
 
-  const getDeadlineInfo = (item: any) => {
+  const getDeadlineInfo = (item: LostItem) => {
     if (item.status !== '保管中' || item.reported_to_police_at) return null;
     const foundDate = new Date(item.found_at);
     const today = new Date();
@@ -90,25 +91,28 @@ export default function DashboardPage() {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const remaining = 7 - diffDays;
 
-    if (remaining <= 0) return { label: '期限切れ', color: '#ff3b30', isUrgent: true };
-    if (remaining <= 2) return { label: `あと${remaining}日`, color: '#ff9500', isUrgent: true };
-    return { label: `あと${remaining}日`, color: '#34c759', isUrgent: false };
+    if (remaining <= 0) return { label: '期限切れ', color: '#ff3b30', isUrgent: true, remaining };
+    if (remaining <= 2) return { label: `あと${remaining}日`, color: '#ff9500', isUrgent: true, remaining };
+    return { label: `あと${remaining}日`, color: '#34c759', isUrgent: false, remaining };
   };
 
-  const urgentItemsCount = useMemo(() => {
-    return items.filter(item => getDeadlineInfo(item)?.isUrgent).length;
+  const urgentItems = useMemo(() => {
+    return items
+      .filter(item => getDeadlineInfo(item)?.isUrgent)
+      .map(item => ({ ...item, deadline: getDeadlineInfo(item) }));
   }, [items]);
 
-  // 【追加】残り1日以下の件数をカウント（ポップアップ用）
+  const urgentItemsCount = urgentItems.length;
+
   const extremelyUrgentCount = useMemo(() => {
-    return items.filter(item => {
-      const info = getDeadlineInfo(item);
-      if (!info) return false;
-      const foundDate = new Date(item.found_at);
-      const diffDays = Math.floor((new Date().getTime() - foundDate.getTime()) / (1000 * 60 * 60 * 24));
-      return (7 - diffDays) <= 1;
-    }).length;
-  }, [items]);
+    return urgentItems.filter(item => (item.deadline?.remaining ?? 99) <= 1).length;
+  }, [urgentItems]);
+
+  useEffect(() => {
+    if (!loading && extremelyUrgentCount > 0) {
+      setShowUrgentModal(true);
+    }
+  }, [loading, extremelyUrgentCount]);
 
   const groupedItems = useMemo(() => {
     const definedStatuses = ['引き渡し済', '回収済', '廃棄済'];
@@ -125,14 +129,12 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* 【追加】最上部を占拠するバナー（残り2日以内の緊急アイテムがある場合） */}
       {urgentItemsCount > 0 && (
         <div style={{ backgroundColor: '#ff3b30', color: 'white', padding: '10px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', position: 'sticky', top: 0, zIndex: 200 }}>
           ⚠️ 警察への届出期限が近いアイテムが {urgentItemsCount} 件あります。至急確認してください。
         </div>
       )}
 
-      {/* 【追加】緊急ポップアップモーダル（残り1日以内の場合のみログイン時に表示） */}
       {showUrgentModal && extremelyUrgentCount > 0 && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '20px', maxWidth: '400px', width: '100%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
@@ -163,7 +165,38 @@ export default function DashboardPage() {
               ✉️ {profileInfo.email}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', position: 'relative' }}>
+            {/* 【追加】通知ベルマーク */}
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowNotificationPopup(!showNotificationPopup)}>
+              <span style={{ fontSize: '1.4rem' }}>🔔</span>
+              {urgentItemsCount > 0 && (
+                <span style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ff3b30', color: 'white', fontSize: '0.6rem', fontWeight: '800', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}>
+                  {urgentItemsCount}
+                </span>
+              )}
+              
+              {/* 【追加】通知ドロップダウンメニュー */}
+              {showNotificationPopup && (
+                <div style={{ position: 'absolute', top: '35px', right: '0', width: '280px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', border: '1px solid #d2d2d7', zIndex: 500, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px', borderBottom: '1px solid #f5f5f7', fontWeight: '700', fontSize: '0.85rem' }}>通知詳細</div>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    {urgentItems.length === 0 ? (
+                      <div style={{ padding: '20px', fontSize: '0.75rem', color: '#86868b', textAlign: 'center' }}>現在、緊急の通知はありません。</div>
+                    ) : (
+                      urgentItems.map(item => (
+                        <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ padding: '12px', borderBottom: '1px solid #f5f5f7', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: '700', color: item.deadline?.color }}>⚠️ {item.deadline?.label}</div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1d1d1f' }}>{item.name}</div>
+                          <div style={{ fontSize: '0.65rem', color: '#86868b' }}>#{item.management_number}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', padding: '6px 12px', borderRadius: '8px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>+ 新規登録</button>
             <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: '1px solid #d2d2d7', padding: '5px 8px', borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', fontWeight: '600' }}>マイページ</button>
           </div>
@@ -171,8 +204,6 @@ export default function DashboardPage() {
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        
-        {/* 既存の警察届出アラート（以前からあった枠線の警告表示を維持） */}
         {urgentItemsCount > 0 && (
           <div style={{ backgroundColor: '#fff2f2', border: '1px solid #ff3b30', borderRadius: '12px', padding: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '1.5rem' }}>⚠️</span>
@@ -183,7 +214,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
+        {(Object.entries(groupedItems) as [string, LostItem[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', borderBottom: '1px solid #d2d2d7', paddingBottom: '10px' }}>
               <h2 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0 }}>{status}</h2>
