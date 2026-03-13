@@ -8,6 +8,7 @@ export default function MyPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [email, setEmail] = useState(''); // メールアドレス用の状態
   const [facilityName, setFacilityName] = useState('');
   const [managerName, setManagerName] = useState('');
 
@@ -23,6 +24,7 @@ export default function MyPage() {
         router.push('/login');
         return;
       }
+      setEmail(user.email || ''); // メールアドレスを取得
       setFacilityName(user.user_metadata?.facility_name || '');
       setManagerName(user.user_metadata?.manager_name || '');
       setLoading(false);
@@ -44,7 +46,6 @@ export default function MyPage() {
     if (error) {
       alert('更新に失敗しました: ' + error.message);
     } else {
-      // 修正ポイント：OKを押した後にダッシュボードへ戻る
       alert('情報を更新しました。');
       router.push('/'); 
       router.refresh();
@@ -60,6 +61,18 @@ export default function MyPage() {
         <h1 style={{ fontSize: '1.5rem', marginBottom: '20px' }}>マイページ設定</h1>
         
         <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* メールアドレス（表示のみ） */}
+          <div>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px', color: '#86868b' }}>登録メールアドレス</label>
+            <input 
+              type="text" 
+              value={email} 
+              readOnly 
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', backgroundColor: '#f9f9f9', color: '#86868b', cursor: 'not-allowed', boxSizing: 'border-box' }}
+            />
+            <p style={{ fontSize: '0.75rem', color: '#86868b', marginTop: '5px' }}>※メールアドレスは変更できません</p>
+          </div>
+
           <div>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>施設名・企業名</label>
             <input 
@@ -70,6 +83,7 @@ export default function MyPage() {
               style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }}
             />
           </div>
+
           <div>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>担当者名</label>
             <input 
@@ -81,7 +95,7 @@ export default function MyPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
             <button 
               type="button"
               onClick={() => router.push('/')}
