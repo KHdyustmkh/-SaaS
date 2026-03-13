@@ -82,53 +82,47 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* --- ヘッダーエリア (青枠部分の再現・改行防止) --- */}
+      {/* --- 青枠：最上部ヘッダー (改行防止策適用済み) --- */}
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 12px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           
-          {/* 左側：タイトルグループ（改行を許さない設定） */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 1, minWidth: 0 }}>
             <div style={{ backgroundColor: '#2c52e1', padding: '6px', borderRadius: '8px', display: 'flex', flexShrink: 0 }}>
               <span style={{ color: 'white', fontSize: '1rem' }}>⊞</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
               <span style={{ 
-                fontSize: 'clamp(0.75rem, 3.5vw, 0.95rem)', // 画面幅に合わせて縮小
+                fontSize: 'clamp(0.7rem, 3.2vw, 0.95rem)', 
                 fontWeight: '800', 
                 color: '#1d1d1f', 
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
+                whiteSpace: 'nowrap'
               }}>
                 拾得物管理ポータル
               </span>
               <div style={{ 
-                display: 'inline-block',
                 backgroundColor: '#f5f5f7', 
                 padding: '4px 8px', 
                 borderRadius: '6px', 
                 border: '1px solid #d2d2d7',
-                fontSize: 'clamp(0.65rem, 3vw, 0.8rem)', 
+                fontSize: 'clamp(0.6rem, 2.8vw, 0.8rem)', 
                 fontWeight: '600', 
                 color: '#1d1d1f', 
-                whiteSpace: 'nowrap',
-                flexShrink: 0
+                whiteSpace: 'nowrap'
               }}>
                 ダッシュボード
               </div>
             </div>
           </div>
 
-          {/* 右側：新規登録ボタン */}
-          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#2c52e1', color: 'white', padding: '8px 12px', borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <span>⊕</span> 新規登録
+          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#2c52e1', color: 'white', padding: '8px 12px', borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            ⊕ 新規登録
           </button>
         </div>
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px' }}>
         
-        {/* --- ユーザー情報 --- */}
+        {/* --- ユーザー情報表示 --- */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>👤 {profileInfo.displayName}</div>
@@ -140,7 +134,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* --- 警察届出アラート --- */}
+        {/* --- 警察届出アラート (期限が近い場合のみ表示) --- */}
         {urgentItemsCount > 0 && (
           <div style={{ backgroundColor: '#fff2f2', border: '1px solid #ff3b30', borderRadius: '12px', padding: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '1.2rem' }}>⚠️</span>
@@ -151,9 +145,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 黄色い枠で囲まれていた二重タイトル（拾得物管理ポータル + 新規ボタン）はここから削除されました */}
+        {/* ★ 黄色い枠（重複タイトルと新規ボタン）の記述を完全に削除しました ★ */}
 
-        {/* --- リスト表示エリア --- */}
+        {/* --- ステータス別アイテムリスト --- */}
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '30px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', borderBottom: '1px solid #d2d2d7', paddingBottom: '6px' }}>
