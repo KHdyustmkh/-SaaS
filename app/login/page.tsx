@@ -7,7 +7,7 @@ import { useState } from 'react';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const supabase = createBrowserClient(
@@ -17,99 +17,42 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage('ログイン中...');
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setMessage('エラー: ' + error.message);
+      alert('ログインに失敗しました: ' + error.message);
+      setLoading(false);
     } else {
       router.push('/');
       router.refresh();
     }
   };
 
-  const handleSignUp = async () => {
-    setMessage('登録処理中...');
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) {
-      setMessage('登録エラー: ' + error.message);
-    } else {
-      setMessage('✅ 確認メールを送信しました。\nメール内のボタンを押して登録を完了させてください。');
-    }
-  };
-
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: '100vh', // 画面の縦中央に配置
-      backgroundColor: '#f5f5f5',
-      fontFamily: 'sans-serif' 
-    }}>
-      <div style={{ 
-        width: '380px',
-        padding: '40px', 
-        border: '1px solid #ddd', 
-        borderRadius: '12px', 
-        boxShadow: '0 8px 16px rgba(0,0,0,0.05)',
-        backgroundColor: 'white',
-        position: 'relative' // 子要素の基準にする
-      }}>
-        <h1 style={{ marginBottom: '30px', textAlign: 'center', color: '#333', fontSize: '24px' }}>施設管理ログイン</h1>
-        
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <input 
-            type="email" 
-            placeholder="メールアドレス" 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            required 
-            style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '16px' }} 
-          />
-          <input 
-            type="password" 
-            placeholder="パスワード" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            required 
-            style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '16px' }} 
-          />
-          
-          <button 
-            type="submit" 
-            style={{ backgroundColor: '#0070f3', color: 'white', padding: '14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', marginTop: '10px' }}
-          >
-            ログイン
-          </button>
-          
-          <button 
-            type="button" 
-            onClick={handleSignUp} 
-            style={{ backgroundColor: 'transparent', color: '#0070f3', padding: '10px', borderRadius: '6px', border: '1px solid #0070f3', cursor: 'pointer', fontSize: '14px' }}
-          >
-            新規施設として登録
+    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', width: '100%', maxWidth: '400px' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '30px', textAlign: 'center' }}>ログイン</h1>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '8px' }}>メールアドレス</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '1rem' }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '8px' }}>パスワード</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '1rem' }} />
+          </div>
+          <button type="submit" disabled={loading} style={{ backgroundColor: '#007aff', color: 'white', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', marginTop: '10px' }}>
+            {loading ? 'ログイン中...' : 'ログイン'}
           </button>
         </form>
-
-        {/* メッセージ表示エリア：高さを固定することで入力欄のズレを防ぐ */}
-        <div style={{ minHeight: '60px', marginTop: '20px' }}>
-          {message && (
-            <p style={{ 
-              color: message.includes('エラー') ? '#ff4d4f' : '#0070f3', 
-              textAlign: 'center', 
-              fontSize: '14px',
-              lineHeight: '1.5',
-              whiteSpace: 'pre-wrap',
-              fontWeight: '500',
-              margin: '0'
-            }}>
-              {message}
-            </p>
-          )}
+        
+        <div style={{ marginTop: '20px', textAlign: 'center' }}>
+          <button 
+            onClick={() => router.push('/forgot-password')} 
+            style={{ backgroundColor: 'transparent', border: 'none', color: '#007aff', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            パスワードを忘れた場合
+          </button>
         </div>
       </div>
     </div>
