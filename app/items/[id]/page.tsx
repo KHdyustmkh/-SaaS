@@ -19,11 +19,11 @@ export default function ItemDetailPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 削除処理の追加
+  // 【機能1】アイテム削除（ステップ2：確実な同期対応版）
   const handleDelete = async () => {
     if (!id) return;
     
-    const confirmDelete = window.confirm('このアイテムを完全に削除しますか？この操作は取り消せません。');
+    const confirmDelete = window.confirm('このアイテムを完全に削除しますか？');
     if (!confirmDelete) return;
 
     setUpdating(true);
@@ -33,18 +33,24 @@ export default function ItemDetailPage() {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete Error:', error);
+        throw error;
+      }
 
-      alert('アイテムを削除しました。');
-      router.push('/');
-      router.refresh();
+      alert('アイテムを削除しました。ダッシュボードへ戻ります。');
+      
+      // router.pushではなく、window.location.hrefを使用することで
+      // ブラウザを完全リロードさせ、DBの最新状態を強制取得させます
+      window.location.href = '/'; 
     } catch (error: any) {
-      alert('削除に失敗しました: ' + error.message);
+      alert('削除に失敗しました（RLS権限を確認してください）: ' + error.message);
     } finally {
       setUpdating(false);
     }
   };
 
+  // 【機能2】ステータス更新（同期補強版）
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return;
     setUpdating(true);
@@ -56,12 +62,16 @@ export default function ItemDetailPage() {
 
       if (error) throw error;
 
-      router.refresh();
+      // ローカルの状態を即座に書き換え
       setItem((prev: any) => ({ ...prev, status: newStatus }));
-      alert(`ステータスを「${newStatus}」に変更しました。一覧に戻ります。`);
-      router.push('/');
+      
+      // サーバー側の変更をNext.jsに通知
+      router.refresh();
+      
+      alert(`ステータスを「${newStatus}」に変更しました。`);
     } catch (error: any) {
-      alert('更新に失敗しました: ' + error.message);
+      // 画像16枚目のエラー（制約違反）が発生した場合、ここで通知されます
+      alert('更新に失敗しました。SQL Editorで制約を更新したか確認してください: ' + error.message);
     } finally {
       setUpdating(false);
     }
@@ -107,35 +117,48 @@ export default function ItemDetailPage() {
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <button onClick={() => router.push('/')} style={{ padding: '10px 20px', cursor: 'pointer', border: 'none', backgroundColor: '#ddd', borderRadius: '8px', fontWeight: 'bold' }}>← 戻る</button>
+          <button onClick={() => router.push('/')} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#e5e5e7', borderRadius: '10px', fontWeight: 'bold' }}>← 戻る</button>
           
-          {/* 削除ボタンの追加 */}
           <button 
             onClick={handleDelete} 
             disabled={updating}
-            style={{ padding: '10px 20px', cursor: 'pointer', border: 'none', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '8px', fontWeight: 'bold' }}
+            style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#ff3b30', color: 'white', borderRadius: '10px', fontWeight: 'bold', opacity: updating ? 0.5 : 1 }}
           >
-            🗑️ このアイテムを消去
+            {updating ? '処理中...' : '🗑️ この情報を完全に削除'}
           </button>
         </div>
 
-        <div style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#1a1a1a', padding: '20px' }}>
-            <div style={{ width: '100%', height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
-              {allPhotos.length > 0 ? <img src={allPhotos[activePhotoIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <div style={{ color: '#666' }}>画像なし</div>}
+        <div style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', padding: '20px' }}>
+            <div style={{ width: '100%', height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
+              {allPhotos.length > 0 ? <img src={allPhotos[activePhotoIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <div style={{ color: '#555' }}>画像なし</div>}
             </div>
+            {allPhotos.length > 1 && (
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                {allPhotos.map((url, index) => (
+                  <div key={index} onClick={() => setActivePhotoIndex(index)} style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: activePhotoIndex === index ? '2px solid #007aff' : '2px solid transparent' }}>
+                    <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ padding: '40px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', borderBottom: '2px solid #f0f0f0', paddingBottom: '15px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
-                <h1 style={{ fontSize: '1.8rem', margin: '0' }}>{item.name}</h1>
-                <div style={{ color: '#888' }}>管理番号: {item.management_number}</div>
+                <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: '0 0 8px 0', color: '#1d1d1f' }}>{item.name}</h1>
+                <div style={{ color: '#86868b', fontSize: '0.9rem' }}>管理番号: {item.management_number}</div>
               </div>
 
               <div style={{ textAlign: 'right' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#888', marginBottom: '5px' }}>ステータス変更</label>
-                <select value={item.status} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #0070f3', fontWeight: 'bold', color: '#0070f3' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>ステータス管理</label>
+                <select 
+                  value={item.status || '保管中'} 
+                  onChange={(e) => handleStatusChange(e.target.value)} 
+                  disabled={updating} 
+                  style={{ padding: '10px 16px', borderRadius: '12px', border: '2px solid #007aff', fontWeight: 'bold', color: '#007aff', backgroundColor: '#fff', cursor: 'pointer' }}
+                >
                   <option value="保管中">🔵 保管中</option>
                   <option value="引き渡し済">🟢 引き渡し済</option>
                   <option value="回収済">🟡 回収済</option>
@@ -143,15 +166,17 @@ export default function ItemDetailPage() {
                 </select>
               </div>
             </div>
-            {/* 詳細情報は以前のまま維持されます */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '30px' }}>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px' }}>
               <section>
-                <div style={{ marginBottom: '20px' }}><label style={{ color: '#888', fontSize: '0.85rem' }}>拾得場所</label><div style={{ fontWeight: 'bold' }}>{item.location}</div></div>
-                <div style={{ marginBottom: '20px' }}><label style={{ color: '#888', fontSize: '0.85rem' }}>カテゴリー</label><div style={{ fontWeight: 'bold' }}>{item.category}</div></div>
+                <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
+                <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
               </section>
               <section>
-                <label style={{ color: '#888', fontSize: '0.85rem' }}>詳細説明</label>
-                <div style={{ backgroundColor: '#f8f8fa', padding: '15px', borderRadius: '10px', minHeight: '100px', whiteSpace: 'pre-wrap' }}>{item.description || 'なし'}</div>
+                <label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>詳細説明</label>
+                <div style={{ backgroundColor: '#f5f5f7', padding: '20px', borderRadius: '14px', minHeight: '120px', color: '#1d1d1f', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                  {item.description || '追加の説明はありません。'}
+                </div>
               </section>
             </div>
           </div>

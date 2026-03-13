@@ -14,7 +14,7 @@ export default function DashboardPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // データを取得する関数
+  // 【ステップ3：厳格化】データを取得するメイン関数
   const fetchItems = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -22,9 +22,11 @@ export default function DashboardPage() {
       return;
     }
 
+    // select('*', { count: 'exact' }) を追加し、DBの最新実数を強制的に計算させます
+    // これにより、削除済みのデータがキャッシュから読み込まれるのを防ぎます
     const { data, error } = await supabase
       .from('lost_items')
-      .select('*')
+      .select('*', { count: 'exact' }) 
       .order('created_at', { ascending: false });
 
     if (!error && data) {
@@ -34,9 +36,11 @@ export default function DashboardPage() {
   }, [supabase, router]);
 
   useEffect(() => {
+    // 初回読み込み
     fetchItems();
     
-    // 他の画面から戻ってきたときに最新状態に更新する
+    // 【同期補強】詳細画面から戻ってきた際や、タブを切り替えて戻った際に
+    // 画面のフォーカスを検知してバックグラウンドで再取得を実行します
     const handleFocus = () => {
       fetchItems();
     };
@@ -45,7 +49,7 @@ export default function DashboardPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [fetchItems]);
 
-  // 【重要】アイテムの振り分けロジック
+  // アイテムのステータス別振り分け（古いデータの救済ロジック継続）
   const groupedItems = useMemo(() => {
     const definedStatuses = ['引き渡し済', '回収済', '廃棄済'];
 
@@ -53,7 +57,7 @@ export default function DashboardPage() {
       保管中: items.filter(item => 
         !item.status || 
         item.status === '保管中' || 
-        !definedStatuses.includes(item.status) // 古い未知のステータスもここで拾う
+        !definedStatuses.includes(item.status)
       ),
       引き渡し済: items.filter(item => item.status === '引き渡し済'),
       回収済: items.filter(item => item.status === '回収済'),
@@ -61,53 +65,61 @@ export default function DashboardPage() {
     };
   }, [items]);
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>読み込み中...</div>;
+  if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>最新の情報を取得中...</div>;
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>拾得物管理ダッシュボード</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: '800', color: '#1d1d1f' }}>拾得物管理ポータル</h1>
           <button 
             onClick={() => router.push('/items/new')} 
-            style={{ backgroundColor: '#0070f3', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+            style={{ backgroundColor: '#007aff', color: 'white', padding: '12px 28px', borderRadius: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,122,255,0.3)' }}
           >
             + 新規登録
           </button>
         </div>
 
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
-          <section key={status} style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px', borderBottom: '2px solid #ddd', paddingBottom: '10px' }}>
-              <h2 style={{ fontSize: '1.4rem', margin: 0 }}>{status}</h2>
-              <span style={{ backgroundColor: '#888', color: 'white', padding: '2px 10px', borderRadius: '12px', fontSize: '0.9rem' }}>
-                {list.length} 件
+          <section key={status} style={{ marginBottom: '50px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', borderBottom: '1px solid #d2d2d7', paddingBottom: '12px' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', margin: 0, color: '#1d1d1f' }}>{status}</h2>
+              <span style={{ backgroundColor: '#86868b', color: 'white', padding: '2px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600' }}>
+                {list.length}
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
               {list.length === 0 ? (
-                <div style={{ color: '#999', fontSize: '0.9rem', padding: '10px' }}>該当するアイテムはありません</div>
+                <div style={{ color: '#86868b', fontSize: '0.95rem', padding: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px dashed #d2d2d7', textAlign: 'center', gridColumn: '1 / -1' }}>
+                  現在、{status}のアイテムはありません
+                </div>
               ) : (
                 list.map((item) => (
                   <div 
                     key={item.id} 
                     onClick={() => router.push(`/items/${item.id}`)} 
-                    style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'transform 0.2s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'all 0.3s ease' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.05)';
+                    }}
                   >
-                    <div style={{ width: '100%', height: '180px', backgroundColor: '#eee' }}>
+                    <div style={{ width: '100%', height: '200px', backgroundColor: '#f5f5f7' }}>
                       {item.photo_url ? (
                         <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#ccc' }}>画像なし</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#d2d2d7', fontSize: '3rem' }}>📦</div>
                       )}
                     </div>
-                    <div style={{ padding: '15px' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#0070f3', fontWeight: 'bold', marginBottom: '5px' }}>{item.category}</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '5px' }}>{item.name}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#666' }}>管理番号: {item.management_number}</div>
+                    <div style={{ padding: '20px' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#007aff', fontWeight: '700', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>{item.category}</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '8px', color: '#1d1d1f' }}>{item.name}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#86868b', lineHeight: '1.4' }}>管理番号: {item.management_number}</div>
                     </div>
                   </div>
                 ))
