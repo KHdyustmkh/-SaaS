@@ -67,7 +67,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [fetchItems]);
 
-  // --- 追加: 期限計算ロジック ---
   const getDeadlineInfo = (item: any) => {
     if (item.status !== '保管中' || item.reported_to_police_at) return null;
     const foundDate = new Date(item.found_at);
@@ -100,10 +99,10 @@ export default function DashboardPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '0 0 40px 0', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* --- ヘッダーエリア --- */}
+      {/* 1. 【残す部分】最上部ヘッダー：ここに新規登録ボタンを移設しました */}
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '10px 15px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', maxWidth: '60%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', maxWidth: '40%' }}>
             {profileInfo.displayName && (
               <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 👤 {profileInfo.displayName}
@@ -113,7 +112,8 @@ export default function DashboardPage() {
               ✉️ {profileInfo.email}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', padding: '6px 12px', borderRadius: '8px', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>+ 新規登録</button>
             <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: '1px solid #d2d2d7', padding: '5px 8px', borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', fontWeight: '600' }}>マイページ</button>
             <button onClick={handleLogout} style={{ backgroundColor: 'transparent', border: '1px solid #d2d2d7', padding: '5px 8px', borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', color: '#ff3b30', fontWeight: '600' }}>ログアウト</button>
           </div>
@@ -122,49 +122,9 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         
-        {/* --- 改善されたタイトルエリア --- */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-end', 
-          marginBottom: '30px',
-          gap: '10px'
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.65rem', color: '#007aff', fontWeight: 'bold', letterSpacing: '0.1em', marginBottom: '2px' }}>DASHBOARD</span>
-            <h1 style={{ 
-              fontSize: 'clamp(1rem, 4.2vw, 1.8rem)', 
-              fontWeight: '900', 
-              color: '#1d1d1f', 
-              margin: 0, 
-              letterSpacing: '-0.04em',
-              lineHeight: 1,
-              whiteSpace: 'nowrap'
-            }}>
-              拾得物管理ポータル
-            </h1>
-          </div>
-          <button 
-            onClick={() => router.push('/items/new')} 
-            style={{ 
-              backgroundColor: '#007aff', 
-              color: 'white', 
-              padding: '10px 18px', 
-              borderRadius: '10px', 
-              border: 'none', 
-              fontWeight: 'bold', 
-              cursor: 'pointer', 
-              fontSize: '0.85rem',
-              boxShadow: '0 4px 12px rgba(0,122,255,0.3)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0
-            }}
-          >
-            + 新規登録
-          </button>
-        </div>
+        {/* 2. 【削除完了】ここに存在した「DASHBOARD」「拾得物管理ポータル」「+新規登録」の行を物理的に削除しました */}
 
-        {/* --- 追加: 警察届出アラート --- */}
+        {/* 3. 警察届出アラート（維持） */}
         {urgentItemsCount > 0 && (
           <div style={{ backgroundColor: '#fff2f2', border: '1px solid #ff3b30', borderRadius: '12px', padding: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '1.5rem' }}>⚠️</span>
@@ -175,7 +135,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* --- 以下、リスト表示 --- */}
+        {/* 4. アイテムリスト表示 */}
         {(Object.entries(groupedItems) as [string, any[]][]).map(([status, list]) => (
           <section key={status} style={{ marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', borderBottom: '1px solid #d2d2d7', paddingBottom: '10px' }}>
@@ -191,9 +151,8 @@ export default function DashboardPage() {
                   const deadline = getDeadlineInfo(item);
                   return (
                     <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', cursor: 'pointer', position: 'relative' }}>
-                      {/* --- 追加: 期限バッジ --- */}
                       {deadline && (
-                        <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', zIndex: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                        <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', zIndex: 1 }}>
                           {deadline.label}
                         </div>
                       )}
