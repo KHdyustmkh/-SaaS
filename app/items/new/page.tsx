@@ -118,8 +118,13 @@ export default function NewItemPage() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg(null);
+    
+    // 【修正】現在のログインユーザーを厳格に取得
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push('/login'); return; }
+    if (!user) { 
+      router.push('/login'); 
+      return; 
+    }
 
     try {
       const uploadedUrls: string[] = [];
@@ -135,6 +140,7 @@ export default function NewItemPage() {
 
       const combinedCategory = `${mainCategory} / ${subCategory} / ${itemType}`;
 
+      // 【重要修正】user_id を含めてインサートし、所有者を明確にする
       const { error: dbError } = await supabase.from('lost_items').insert([{
         management_number: managementNumber,
         name: name,
@@ -145,9 +151,11 @@ export default function NewItemPage() {
         description: description,
         photo_url: uploadedUrls[0] || null,
         face_photo_url: uploadedUrls.slice(1).join(',') || null,
-        user_id: user.id
+        user_id: user.id // この1行が他人のデータ混入を防ぐ鍵です
       }]);
+
       if (dbError) throw new Error(`DB登録エラー: ${dbError.message}`);
+      
       router.push('/');
       router.refresh();
     } catch (err: any) {
@@ -159,22 +167,24 @@ export default function NewItemPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ fontSize: '1.5rem', marginBottom: '20px' }}>拾得物 新規登録</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>拾得物 新規登録</h1>
+          <button onClick={() => router.push('/')} style={{ padding: '8px 16px', backgroundColor: '#e5e5e7', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>キャンセル</button>
+        </div>
 
         {errorMsg && <div style={{ backgroundColor: '#fff1f0', color: '#f5222d', padding: '10px', borderRadius: '6px', marginBottom: '20px' }}>{errorMsg}</div>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>管理番号 *</label><input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>管理番号 *</label><input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
           
           <div style={{ padding: '15px', border: '2px dashed #ccc', borderRadius: '8px', backgroundColor: '#fafafa' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px' }}>写真（最大5枚）</label>
             <input type="file" accept="image/*" capture="environment" multiple onChange={handleImageChange} style={{ marginBottom: '15px' }} />
             
-            {/* ★ 写真プレビュー表示エリアの拡大修正 ★ */}
             {imagePreviews.length > 0 && (
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '15px', justifyContent: 'center' }}>
                 {imagePreviews.map((preview, index) => (
-                  <div key={index} style={{ position: 'relative', width: '140px', height: '140px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                  <div key={index} style={{ position: 'relative', width: '120px', height: '120px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
                     <img src={preview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <button type="button" onClick={() => removeImage(index)} style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(255,0,0,0.8)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontWeight: 'bold' }}>×</button>
                   </div>
@@ -183,13 +193,13 @@ export default function NewItemPage() {
             )}
 
             {imageFiles.length > 0 && (
-              <button type="button" onClick={handleAIAnalysis} disabled={isAnalyzing} style={{ width: '100%', padding: '12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                {isAnalyzing ? '🔄 解析中...' : '✨ AIで品名とカテゴリーを自動判定'}
+              <button type="button" onClick={handleAIAnalysis} disabled={isAnalyzing} style={{ width: '100%', padding: '12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: isAnalyzing ? 'not-allowed' : 'pointer' }}>
+                {isAnalyzing ? '🔄 AI解析中...' : '✨ AIで品名とカテゴリーを自動判定'}
               </button>
             )}
           </div>
 
-          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>品名 *</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>品名 *</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
 
           <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
             <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold', color: '#0070f3' }}>詳細カテゴリー *</label>
@@ -218,11 +228,11 @@ export default function NewItemPage() {
             </div>
           </div>
 
-          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>拾得日時 *</label><input type="datetime-local" value={foundAt} onChange={(e) => setFoundAt(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>拾得場所 *</label><input type="text" value={location} onChange={(e) => setLocation(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>詳細説明</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>拾得日時 *</label><input type="datetime-local" value={foundAt} onChange={(e) => setFoundAt(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
+          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>拾得場所 *</label><input type="text" value={location} onChange={(e) => setLocation(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
+          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>詳細説明</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
 
-          <button type="submit" disabled={loading} style={{ backgroundColor: '#0070f3', color: 'white', padding: '15px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>
+          <button type="submit" disabled={loading} style={{ backgroundColor: '#0070f3', color: 'white', padding: '15px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '1rem', marginTop: '10px' }}>
             {loading ? '登録中...' : 'この内容で登録する'}
           </button>
         </form>
