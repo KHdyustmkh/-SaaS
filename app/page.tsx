@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -14,7 +14,8 @@ export default function DashboardPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const fetchItems = async () => {
+  // データを取得する関数を独立させる
+  const fetchItems = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push('/login');
@@ -30,19 +31,24 @@ export default function DashboardPage() {
       setItems(data);
     }
     setLoading(false);
-  };
+  }, [supabase, router]);
 
   useEffect(() => {
     fetchItems();
     
-    // 画面がフォーカスされた時（詳細から戻った時）にデータを再取得する
-    window.addEventListener('focus', fetchItems);
-    return () => window.removeEventListener('focus', fetchItems);
-  }, [supabase, router]);
+    // 他の画面（詳細画面）から戻ってきたときにデータを最新にする
+    const handleFocus = () => {
+      fetchItems();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchItems]);
 
   const groupedItems = useMemo(() => {
+    // DBのstatusと完全に一致する文字列でフィルタリング
     return {
-      保管中: items.filter(item => item.status === '保管中' || !item.status),
+      保管中: items.filter(item => item.status === '保管中' || !item.status || item.status === ''),
       引き渡し済: items.filter(item => item.status === '引き渡し済'),
       回収済: items.filter(item => item.status === '回収済'),
       廃棄済: items.filter(item => item.status === '廃棄済'),
@@ -67,18 +73,22 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-              {list.map((item) => (
-                <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
-                  <div style={{ width: '100%', height: '180px', backgroundColor: '#eee' }}>
-                    {item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#ccc' }}>画像なし</div>}
+              {list.length === 0 ? (
+                <div style={{ color: '#999', fontSize: '0.9rem', padding: '10px' }}>該当するアイテムはありません</div>
+              ) : (
+                list.map((item) => (
+                  <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
+                    <div style={{ width: '100%', height: '180px', backgroundColor: '#eee' }}>
+                      {item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#ccc' }}>画像なし</div>}
+                    </div>
+                    <div style={{ padding: '15px' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#0070f3', fontWeight: 'bold' }}>{item.category}</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{item.name}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#666' }}>管理番号: {item.management_number}</div>
+                    </div>
                   </div>
-                  <div style={{ padding: '15px' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#0070f3', fontWeight: 'bold' }}>{item.category}</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{item.name}</div>
-                    <div style={{ fontSize: '0.85rem', color: '#666' }}>管理番号: {item.management_number}</div>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </section>
         ))}

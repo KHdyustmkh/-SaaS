@@ -26,19 +26,22 @@ export default function ItemDetailPage() {
       const { error } = await supabase
         .from('lost_items')
         .update({ status: newStatus })
-        .eq('id', id); // ここで確実にこのアイテムだけを指定
+        .eq('id', id);
 
       if (error) throw error;
 
-      // 1. ローカルの状態を更新
-      setItem((prev: any) => ({ ...prev, status: newStatus }));
-      
-      // 2. サーバー側のデータを最新にする（ダッシュボードに戻った時に反映させるため）
+      // 1. サーバー側のデータを最新化する命令を出す
       router.refresh();
       
-      alert(`ステータスを「${newStatus}」に変更しました。`);
+      // 2. ローカルの状態を即時更新
+      setItem((prev: any) => ({ ...prev, status: newStatus }));
+      
+      alert(`ステータスを「${newStatus}」に変更しました。一覧に戻ります。`);
+      
+      // 3. 一覧へ戻る（ここが確実な移動の鍵）
+      router.push('/');
     } catch (error: any) {
-      alert('更新に失敗しました: ' + error.message);
+      alert('更新に失敗しました。DB制約を確認してください: ' + error.message);
     } finally {
       setUpdating(false);
     }
@@ -110,7 +113,7 @@ export default function ItemDetailPage() {
 
               <div style={{ textAlign: 'right' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#888', marginBottom: '5px' }}>ステータス変更</label>
-                <select value={item.status} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #0070f3', fontWeight: 'bold', color: '#0070f3' }}>
+                <select value={item.status} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #0070f3', fontWeight: 'bold', color: '#0070f3', cursor: 'pointer' }}>
                   <option value="保管中">🔵 保管中</option>
                   <option value="引き渡し済">🟢 引き渡し済</option>
                   <option value="回収済">🟡 回収済</option>
@@ -126,7 +129,7 @@ export default function ItemDetailPage() {
               </section>
               <section>
                 <label style={{ color: '#888', fontSize: '0.85rem' }}>詳細説明</label>
-                <div style={{ backgroundColor: '#f8f8fa', padding: '15px', borderRadius: '10px', minHeight: '100px' }}>{item.description || 'なし'}</div>
+                <div style={{ backgroundColor: '#f8f8fa', padding: '15px', borderRadius: '10px', minHeight: '100px', whiteSpace: 'pre-wrap' }}>{item.description || 'なし'}</div>
               </section>
             </div>
           </div>
