@@ -35,11 +35,16 @@ export default function DashboardPage() {
     const managerName = user.user_metadata?.manager_name?.trim();
     
     if (facilityName || managerName) {
-      // 施設名と担当者名が設定されている場合は結合して表示
-      const nameParts = [];
-      if (facilityName) nameParts.push(facilityName);
-      if (managerName) nameParts.push(managerName);
-      setDisplayName(nameParts.join(' '));
+      // 施設名と担当者名が設定されている場合の処理
+      let formattedName = '';
+      if (facilityName) {
+        formattedName += facilityName;
+      }
+      if (managerName) {
+        // 施設名がある場合はスペースを入れ、担当者名の後に「様」を追加
+        formattedName += (formattedName ? ' ' : '') + managerName + ' 様';
+      }
+      setDisplayName(formattedName);
     } else {
       // どちらも未設定の場合はメールアドレスを表示
       setDisplayName(user.email ?? null);
