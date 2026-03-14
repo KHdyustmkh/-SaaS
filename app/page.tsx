@@ -38,12 +38,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      // 最新のセッションとユーザー情報を強制取得（キャッシュ回避のためgetUserを使用）
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (user) {
         setUserInfo({
           email: user.email ?? null,
-          facilityName: user.user_metadata?.facility_name || '未設定の施設',
-          staffName: user.user_metadata?.full_name || '未設定'
+          // 施設名：複数のキーパターンに対応
+          facilityName: user.user_metadata?.facility_name || user.user_metadata?.facilityName || '未設定の施設',
+          // 担当者名：full_name, staff_name, display_name の順にチェック
+          staffName: user.user_metadata?.full_name || user.user_metadata?.staff_name || user.user_metadata?.display_name || '未設定'
         });
       }
 
@@ -102,12 +106,12 @@ export default function Dashboard() {
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
-      {/* 指示に基づき、すべての要素をこの1行のヘッダーに集約 */}
+      {/* 統合ヘッダー：すべての情報を1行に集約し、サブヘッダーを廃止 */}
       <header style={{ backgroundColor: 'white', padding: '10px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
         
-        {/* 左側：ロゴとユーザー/施設詳細情報 */}
+        {/* 左側：ロゴとユーザー/施設詳細情報の統合 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => router.push('/')}>
             <div style={{ backgroundColor: '#007aff', color: 'white', padding: '6px', borderRadius: '6px' }}>🔳</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem' }}>
@@ -119,9 +123,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 右側：アクションボタンとアイコン */}
+        {/* 右側：ボタンとアイコン */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer' }}>マイページ</button>
+          <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500' }}>マイページ</button>
           <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
           <div style={{ width: '32px', height: '32px', backgroundColor: '#ff4081', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', marginLeft: '8px' }}>
             {userInfo.email ? userInfo.email[0].toUpperCase() : 'U'}
@@ -129,12 +133,10 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* サブヘッダー行は完全に削除 */}
-
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         <div style={{ height: '24px' }} />
 
-        {/* 検索・フィルター */}
+        {/* 検索・フィルターエリア */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', gap: '16px' }}>
             <div style={{ flex: 1 }}>
@@ -165,7 +167,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 統計エリア */}
+        {/* 統計カード */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
           <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => {}} />
           <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => {}} />
