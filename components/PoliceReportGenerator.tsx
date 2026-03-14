@@ -8,7 +8,7 @@ interface PoliceReportProps {
   itemData: {
     product_name: string;
     category_hint: string;
-    location: string;
+    location: string; // 親から渡されるDBの場所
     color: string;
     description: string;
     image_url?: string;
@@ -16,12 +16,12 @@ interface PoliceReportProps {
 }
 
 export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData }) => {
-  // ★修正: 初期値を空ではなく itemData.location に設定
-  const [location, setLocation] = useState(itemData.location);
+  // ★修正：初期値を itemData.location から取得
+  const [location, setLocation] = useState(itemData.location || '');
   const [claimRights, setClaimRights] = useState('主張する');
   const reportRef = useRef<HTMLDivElement>(null);
 
-  // データが遅れて読み込まれた場合のために同期処理を追加
+  // 親データの変更（読み込み完了）を検知して同期
   useEffect(() => {
     if (itemData.location) {
       setLocation(itemData.location);
@@ -47,8 +47,9 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
     <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #e5e5e7', borderRadius: '12px', backgroundColor: '#fff' }}>
       <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '15px' }}>📄 警察提出用PDF生成</h3>
       
+      {/* 拾得場所入力 */}
       <div style={{ marginBottom: '15px' }}>
-        <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '4px' }}>拾得場所（自動入力済）</label>
+        <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '4px' }}>詳細な拾得場所（任意）</label>
         <input 
           type="text" 
           value={location} 
@@ -58,6 +59,7 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
         />
       </div>
 
+      {/* 権利主張の選択UI（ガードレール機能） */}
       <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f0f7ff', borderRadius: '8px', border: '1px solid #cce5ff' }}>
         <label style={{ fontSize: '0.75rem', color: '#0056b3', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
           所有権取得の希望（ビジネスモデルの維持に必須）
@@ -117,6 +119,7 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
             <p style={{ margin: 0 }}>
               本届出物件について、遺失物法第28条に基づき、保管期間満了時における所有権の取得を主張いたします。
               所有権取得後は、提携する資源循環事業者（古物商許可保有）を通じて、適正な再流通または再資源化を執り行います。
+              これは、施設内における放置物件の有効活用と廃棄物削減を目的とした適正管理プロセスの一環です。
             </p>
           </div>
 

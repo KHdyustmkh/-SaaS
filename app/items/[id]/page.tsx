@@ -103,16 +103,16 @@ export default function ItemDetailPage() {
 
   // ★修正: location を追加して子コンポーネントに渡す
   const itemDataForPdf = useMemo(() => {
-    if (!item) return null;
-    return {
-      product_name: item.name,
-      category_hint: item.category,
-      location: item.location || "", 
-      color: "", 
-      description: item.description || "",
-      image_url: item.photo_url || ""
-    };
-  }, [item]);
+  if (!item) return null;
+  return {
+    product_name: item.name,
+    category_hint: item.category,
+    location: item.location || "", // ★DBから取得した場所を連携
+    color: "", 
+    description: item.description || "",
+    image_url: item.photo_url || ""
+  };
+}, [item]);
 
   useEffect(() => {
     if (!id) return;
