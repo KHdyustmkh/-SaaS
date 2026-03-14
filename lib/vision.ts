@@ -2,8 +2,8 @@ export async function analyzeImage(base64Image: string) {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) return { product_name: "キー未設定", category_hint: "その他", color: "不明", description: "設定エラー" };
 
-  // 【最重要】Googleが確実に認識する「最新のエイリアス」に変更
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+  // 2026年時点の最新安定モデル gemini-2.0-flash を使用
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -21,19 +21,26 @@ export async function analyzeImage(base64Image: string) {
 
     const result = await response.json();
 
-    // 404エラーが出た場合のデバッグログ
-    if (result.error) {
-      console.error("Google API Error Detail:", result.error.message);
-      throw new Error(result.error.message);
+    if (!response.ok || result.error) {
+      throw new Error(result.error?.message || `HTTP ${response.status}`);
     }
 
-    const aiText = result.candidates[0].content.parts[0].text;
+    const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!aiText) throw new Error("Empty response from AI");
+
     const jsonMatch = aiText.match(/\{.*\}/s);
-    if (!jsonMatch) throw new Error("Invalid JSON response from AI");
+    if (!jsonMatch) throw new Error("Invalid JSON format");
     
     return JSON.parse(jsonMatch[0]);
 
   } catch (error: any) {
-    return { product_name: "判別不能", category_hint: "その他", color: "不明", description: `原因: ${error.message}` };
+    console.warn("Vision API Error:", error.message);
+    // 解析に失敗しても入力を止めないためのフォールバック
+    return { 
+      product_name: "", 
+      category_hint: "その他", 
+      color: "", 
+      description: "【自動解析に失敗しました。お手数ですが手動で入力してください】" 
+    };
   }
 }
