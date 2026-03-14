@@ -20,7 +20,10 @@ interface LostItem {
 function ListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // URLパラメータの取得
   const statusFilter = searchParams.get('status') || '保管中';
+  const isUnsubmittedOnly = searchParams.get('unsubmitted') === 'true';
 
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,11 +68,20 @@ function ListContent() {
 
   const sortedAndFilteredList = useMemo(() => {
     let list = items.filter(item => {
+      // ステータスの正規化（未設定は保管中として扱う）
       const definedStatuses = ['引き渡し済', '回収済', '廃棄済'];
       const currentItemStatus = (!item.status || item.status === '保管中' || !definedStatuses.includes(item.status)) ? '保管中' : item.status;
-      const isCorrectStatus = currentItemStatus === statusFilter;
-      if (!isCorrectStatus) return false;
 
+      // 【修正】届出未完了モードかどうかの判定
+      if (isUnsubmittedOnly) {
+        // 「保管中」かつ「届出日が空」のものだけを通す
+        if (currentItemStatus !== '保管中' || item.reported_to_police_at) return false;
+      } else {
+        // 通常のステータスフィルタ
+        if (currentItemStatus !== statusFilter) return false;
+      }
+
+      // 検索ワードフィルタ
       return item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
              (item.management_number && item.management_number.includes(searchQuery));
     });
@@ -86,7 +98,7 @@ function ListContent() {
       }
       return 0;
     });
-  }, [items, statusFilter, searchQuery, sortBy]);
+  }, [items, statusFilter, isUnsubmittedOnly, searchQuery, sortBy]);
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
 
@@ -97,63 +109,24 @@ function ListContent() {
           <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', color: '#007aff', fontSize: '1rem', cursor: 'pointer', fontWeight: '600' }}>
             ＜ 戻る
           </button>
-          <h1 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>{statusFilter} 一覧</h1>
+          <h1 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>
+            {isUnsubmittedOnly ? '届出未完了 一覧' : `${statusFilter} 一覧`}
+          </h1>
           <span style={{ backgroundColor: '#86868b', color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.75rem' }}>{sortedAndFilteredList.length} 件</span>
         </div>
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', boxSizing: 'border-box' }}>
-        
-        {/* 操作エリア：絶対に重ならない・突き抜けない構造 */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          padding: '20px', 
-          borderRadius: '16px', 
-          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-          marginBottom: '24px'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '12px' 
-          }}>
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
               <div style={{ position: 'relative', flex: '1 1 300px', maxWidth: '400px' }}>
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868b' }}>🔍</span>
-                <input 
-                  type="text" 
-                  placeholder="品名、管理番号で検索..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 12px 12px 40px', 
-                    borderRadius: '10px', 
-                    border: '1px solid #d2d2d7', 
-                    fontSize: '16px', 
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    backgroundColor: '#f5f5f7'
-                  }}
-                />
+                <input type="text" placeholder="品名、管理番号で検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '16px', backgroundColor: '#f5f5f7', outline: 'none' }} />
               </div>
-              
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.8rem', color: '#86868b', whiteSpace: 'nowrap' }}>並び替え:</span>
-                <select 
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  style={{ 
-                    width: '160px', 
-                    padding: '10px', 
-                    borderRadius: '10px', 
-                    border: '1px solid #d2d2d7', 
-                    backgroundColor: 'white', 
-                    fontSize: '0.9rem',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                >
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ width: '160px', padding: '10px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '0.9rem', outline: 'none' }}>
                   <option value="deadline">期限が近い順</option>
                   <option value="newest">登録が新しい順</option>
                   <option value="oldest">登録が古い順</option>
@@ -177,7 +150,7 @@ function ListContent() {
                   </div>
                   <div style={{ padding: '12px' }}>
                     <div style={{ fontSize: '0.65rem', color: '#007aff', fontWeight: '700' }}>{item.category}</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1d1d1f', margin: '4px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1d1d1f', margin: '4px 0', height: '2.4em', overflow: 'hidden' }}>{item.name}</div>
                     <div style={{ fontSize: '0.75rem', color: '#86868b' }}>#{item.management_number}</div>
                   </div>
                 </div>

@@ -38,7 +38,6 @@ export default function Dashboard() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 共通ロジック：残り日数の計算
   const calculateRemainingDays = (foundAt: string) => {
     const foundDate = new Date(foundAt);
     const today = new Date();
@@ -65,7 +64,6 @@ export default function Dashboard() {
         const fetchedItems = data as LostItem[];
         setItems(fetchedItems);
 
-        // ポップアップアラート（残り3日以下）
         const urgentItems = fetchedItems.filter((item) => {
           if (item.status !== '保管中' || item.reported_to_police_at) return false;
           return calculateRemainingDays(item.found_at) <= 3;
@@ -80,7 +78,6 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [supabase]);
 
-  // 通知ボタン用のフィルタリング
   const urgentNotifications = useMemo(() => {
     return items.filter(item => {
       if (item.status !== '保管中' || item.reported_to_police_at) return false;
@@ -88,12 +85,10 @@ export default function Dashboard() {
     });
   }, [items]);
 
-  // 届出未完了の総数（全期間）
   const unsubmittedCount = useMemo(() => {
     return items.filter(i => (i.status === '保管中' || !i.status) && !i.reported_to_police_at).length;
   }, [items]);
 
-  // アイテムごとのラベル表示（届出未完了）
   const getDeadlineInfo = (item: LostItem) => {
     if (item.status !== '保管中' || item.reported_to_police_at) return null;
     const remaining = calculateRemainingDays(item.found_at);
@@ -179,13 +174,12 @@ export default function Dashboard() {
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        {/* 統計エリア：文言修正「🚨 届出未完了」 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', margin: '24px 0' }}>
-          <StatCard title="🚨 届出未完了" count={unsubmittedCount} color="#5856d6" />
-          <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" />
-          <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" />
-          <StatCard title="回収済" count={stats.collectedItems.length} color="#8e8e93" />
-          <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" />
+          <StatCard title="🚨 届出未完了" count={unsubmittedCount} color="#5856d6" onClick={() => router.push('/items/list?unsubmitted=true')} />
+          <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => router.push('/items/list?status=保管中')} />
+          <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => router.push('/items/list?status=引き渡し済')} />
+          <StatCard title="回収済" count={stats.collectedItems.length} color="#8e8e93" onClick={() => router.push('/items/list?status=回収済')} />
+          <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
@@ -196,14 +190,6 @@ export default function Dashboard() {
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>🔍</span>
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="品名、管理番号で検索..." style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '16px', backgroundColor: '#f5f5f7' }} />
               </div>
-            </div>
-            <div style={{ width: '240px' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
-              <select value={deadlineFilter} onChange={(e) => setDeadlineFilter(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '16px' }}>
-                <option>すべての期限</option>
-                <option>あと7日以内</option>
-                <option>期限切れ</option>
-              </select>
             </div>
           </div>
         </div>
@@ -243,9 +229,9 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
   );
 }
 
-function StatCard({ title, count, color }: { title: string, count: number, color: string }) {
+function StatCard({ title, count, color, onClick }: { title: string, count: number, color: string, onClick: () => void }) {
   return (
-    <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '20px', border: '1px solid #d2d2d7' }}>
+    <div onClick={onClick} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '20px', border: '1px solid #d2d2d7', cursor: 'pointer' }}>
       <div style={{ color: '#86868b', fontSize: '0.8rem', fontWeight: '600' }}>{title}</div>
       <div style={{ fontSize: '2rem', fontWeight: '800', color: color, marginTop: '8px' }}>{count}</div>
     </div>
