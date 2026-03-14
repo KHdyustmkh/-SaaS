@@ -22,12 +22,10 @@ export default function Dashboard() {
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // ユーザー・施設情報の管理
   const [userInfo, setUserInfo] = useState<{
     email: string | null;
     facilityName: string;
-    staffName: string;
-  }>({ email: null, facilityName: '読み込み中...', staffName: '' });
+  }>({ email: null, facilityName: '読み込み中...' });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [deadlineFilter, setDeadlineFilter] = useState('すべての期限');
@@ -39,13 +37,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      // ユーザー情報の取得
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserInfo({
           email: user.email ?? null,
-          facilityName: user.user_metadata?.facility_name || '未設定の施設',
-          staffName: user.user_metadata?.full_name || '担当者未設定'
+          facilityName: user.user_metadata?.facility_name || '未設定の施設'
         });
       }
 
@@ -104,7 +100,6 @@ export default function Dashboard() {
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
-      {/* ヘッダー：画像29の構成を厳守 */}
       <header style={{ backgroundColor: 'white', padding: '10px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ backgroundColor: '#007aff', color: 'white', padding: '6px', borderRadius: '6px' }}>🔳</div>
@@ -123,21 +118,11 @@ export default function Dashboard() {
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        {/* 【修正箇所】「遺失物管理」を施設情報に差し替え */}
-        <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0 }}>{userInfo.facilityName}</h1>
-            <div style={{ fontSize: '0.9rem', color: '#86868b', marginTop: '4px' }}>
-              担当者: <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{userInfo.staffName}</span> 
-              <span style={{ margin: '0 8px', color: '#d2d2d7' }}>|</span> 
-              {userInfo.email}
-            </div>
-          </div>
-          {/* 右側の新規登録ボタンを維持 */}
-          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '20px', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
+        {/* 【修正箇所】施設名のみを表示し、担当者名・メール・ボタンを削除 */}
+        <div style={{ margin: '20px 0' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0 }}>{userInfo.facilityName}</h1>
         </div>
 
-        {/* 検索・フィルター（ロジック注入） */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', gap: '16px' }}>
             <div style={{ flex: 1 }}>
@@ -168,7 +153,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 統計カード（維持） */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
           <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => {}} />
           <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => {}} />
@@ -176,7 +160,6 @@ export default function Dashboard() {
           <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => {}} />
         </div>
 
-        {/* 指示通りの新着セクション */}
         <StatusSection title="✨ 新着の拾得物" items={stats.custodyItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} />
       </main>
     </div>
