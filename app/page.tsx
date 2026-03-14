@@ -184,7 +184,6 @@ export default function Dashboard() {
           <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
-        {/* 検索・フィルターエリア：配置の厳格化 */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ 
             display: 'flex', 
@@ -259,7 +258,23 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
           return (
             <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', border: '1px solid #d2d2d7', cursor: 'pointer', position: 'relative' }}>
               {deadline && <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '4px 10px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '800', zIndex: 1 }}>{deadline.label}</div>}
-              <div style={{ width: '100%', height: '120px', backgroundColor: '#f5f5f7' }}>{item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ textAlign: 'center', lineHeight: '120px' }}>📦</div>}</div>
+              {/* 【修正箇所：写真領域のサイズ調整と表示設定】 */}
+              <div style={{ width: '100%', height: '180px', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                {item.photo_url ? (
+                  <img 
+                    src={item.photo_url} 
+                    alt="" 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'contain', // 写真を見切れさせず全体を表示
+                      backgroundColor: '#f5f5f7' 
+                    }} 
+                  />
+                ) : (
+                  <div style={{ fontSize: '2rem' }}>📦</div>
+                )}
+              </div>
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{item.name}</div>
                 <div style={{ fontSize: '0.7rem', color: '#86868b' }}>#{item.management_number || '---'}</div>
