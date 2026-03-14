@@ -19,59 +19,42 @@ export default function ItemDetailPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 【機能1】アイテム削除（ステップ2：確実な同期対応版）
+  // 日付フォーマット関数（警察届出用）
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
   const handleDelete = async () => {
     if (!id) return;
-    
     const confirmDelete = window.confirm('このアイテムを完全に削除しますか？');
     if (!confirmDelete) return;
 
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from('lost_items')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Delete Error:', error);
-        throw error;
-      }
-
+      const { error } = await supabase.from('lost_items').delete().eq('id', id);
+      if (error) throw error;
       alert('アイテムを削除しました。ダッシュボードへ戻ります。');
-      
-      // router.pushではなく、window.location.hrefを使用することで
-      // ブラウザを完全リロードさせ、DBの最新状態を強制取得させます
       window.location.href = '/'; 
     } catch (error: any) {
-      alert('削除に失敗しました（RLS権限を確認してください）: ' + error.message);
+      alert('削除に失敗しました: ' + error.message);
     } finally {
       setUpdating(false);
     }
   };
 
-  // 【機能2】ステータス更新（同期補強版）
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return;
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from('lost_items')
-        .update({ status: newStatus })
-        .eq('id', id);
-
+      const { error } = await supabase.from('lost_items').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
-
-      // ローカルの状態を即座に書き換え
       setItem((prev: any) => ({ ...prev, status: newStatus }));
-      
-      // サーバー側の変更をNext.jsに通知
       router.refresh();
-      
       alert(`ステータスを「${newStatus}」に変更しました。`);
     } catch (error: any) {
-      // 画像16枚目のエラー（制約違反）が発生した場合、ここで通知されます
-      alert('更新に失敗しました。SQL Editorで制約を更新したか確認してください: ' + error.message);
+      alert('更新に失敗しました: ' + error.message);
     } finally {
       setUpdating(false);
     }
@@ -118,12 +101,7 @@ export default function ItemDetailPage() {
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
           <button onClick={() => router.push('/')} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#e5e5e7', borderRadius: '10px', fontWeight: 'bold' }}>← 戻る</button>
-          
-          <button 
-            onClick={handleDelete} 
-            disabled={updating}
-            style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#ff3b30', color: 'white', borderRadius: '10px', fontWeight: 'bold', opacity: updating ? 0.5 : 1 }}
-          >
+          <button onClick={handleDelete} disabled={updating} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#ff3b30', color: 'white', borderRadius: '10px', fontWeight: 'bold', opacity: updating ? 0.5 : 1 }}>
             {updating ? '処理中...' : '🗑️ この情報を完全に削除'}
           </button>
         </div>
@@ -153,12 +131,7 @@ export default function ItemDetailPage() {
 
               <div style={{ textAlign: 'right' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>ステータス管理</label>
-                <select 
-                  value={item.status || '保管中'} 
-                  onChange={(e) => handleStatusChange(e.target.value)} 
-                  disabled={updating} 
-                  style={{ padding: '10px 16px', borderRadius: '12px', border: '2px solid #007aff', fontWeight: 'bold', color: '#007aff', backgroundColor: '#fff', cursor: 'pointer' }}
-                >
+                <select value={item.status || '保管中'} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '10px 16px', borderRadius: '12px', border: '2px solid #007aff', fontWeight: 'bold', color: '#007aff', backgroundColor: '#fff', cursor: 'pointer' }}>
                   <option value="保管中">🔵 保管中</option>
                   <option value="引き渡し済">🟢 引き渡し済</option>
                   <option value="回収済">🟡 回収済</option>
@@ -171,7 +144,27 @@ export default function ItemDetailPage() {
               <section>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
+                
+                {/* 警察関連の情報を追加 */}
+                {(item.reported_to_police_at || item.police_receipt_number) && (
+                  <div style={{ marginTop: '32px', padding: '20px', backgroundColor: '#f0f7ff', borderRadius: '14px', border: '1px solid #cce5ff' }}>
+                    <label style={{ color: '#007aff', fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🚔 警察届出情報</label>
+                    {item.reported_to_police_at && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <span style={{ color: '#86868b', fontSize: '0.8rem', display: 'block' }}>届出日</span>
+                        <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{formatDate(item.reported_to_police_at)}</span>
+                      </div>
+                    )}
+                    {item.police_receipt_number && (
+                      <div>
+                        <span style={{ color: '#86868b', fontSize: '0.8rem', display: 'block' }}>受理番号</span>
+                        <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{item.police_receipt_number}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </section>
+
               <section>
                 <label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>詳細説明</label>
                 <div style={{ backgroundColor: '#f5f5f7', padding: '20px', borderRadius: '14px', minHeight: '120px', color: '#1d1d1f', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
