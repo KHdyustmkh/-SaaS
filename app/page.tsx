@@ -184,19 +184,19 @@ export default function Dashboard() {
           <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
-        {/* 【修正箇所】検索および期限フィルターセクション：display flex と justify-content を追加して重なりを解消 */}
+        {/* 【修正箇所】検索および期限フィルターセクション：重なりを物理的に排除 */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
-          <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%' }}>
-            {/* クイック検索：flex-grow を持たせて左側を埋める */}
-            <div style={{ flexGrow: 1 }}>
+          <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end', width: '100%' }}>
+            {/* クイック検索：親の幅に応じて伸び縮みするが、フィルターは押し出さない */}
+            <div style={{ flex: '1 1 auto', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>クイック検索</label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>🔍</span>
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="品名、管理番号で検索..." style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '16px', backgroundColor: '#f5f5f7' }} />
               </div>
             </div>
-            {/* 期限フィルター：右側に固定幅で配置 */}
-            <div style={{ width: '240px', flexShrink: 0 }}>
+            {/* 期限フィルター：幅を240pxに完全固定 */}
+            <div style={{ width: '240px', flex: '0 0 240px' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
               <select value={deadlineFilter} onChange={(e) => setDeadlineFilter(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '16px', cursor: 'pointer' }}>
                 <option>すべての期限</option>
