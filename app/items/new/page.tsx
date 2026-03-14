@@ -6,6 +6,8 @@ import { useState, useMemo } from 'react';
 import { analyzeImage } from '@/lib/vision';
 import { convertToBase64 } from '@/lib/utils';
 import { CATEGORY_TREE } from '@/lib/categories';
+// ★追加：PDF生成コンポーネントのインポート
+import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
 
 export default function NewItemPage() {
   const router = useRouter();
@@ -17,6 +19,8 @@ export default function NewItemPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // ★追加：AIの生の解析結果を保持するステート（PDF生成に渡す用）
+  const [aiRawResult, setAiRawResult] = useState<any>(null);
 
   const [managementNumber, setManagementNumber] = useState('');
   const [name, setName] = useState('');
@@ -61,6 +65,13 @@ export default function NewItemPage() {
     try {
       const base64 = await convertToBase64(imageFiles[0]);
       const aiResult = await analyzeImage(base64); 
+      
+      // ★追加：PDF生成用にAIの結果を保存
+      setAiRawResult({
+        ...aiResult,
+        image_url: imagePreviews[0] // プレビュー用のURLを添付
+      });
+
       setName(aiResult.product_name || "");
       const autoDesc = `色: ${aiResult.color}\n特徴: ${aiResult.description}`;
       setDescription(autoDesc);
@@ -91,7 +102,6 @@ export default function NewItemPage() {
     setLoading(true);
     setErrorMsg(null);
     
-    // ユーザーメタデータ（manager_name）を取得
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push('/login'); return; }
 
@@ -109,7 +119,6 @@ export default function NewItemPage() {
 
       const combinedCategory = `${mainCategory} / ${subCategory} / ${itemType}`;
 
-      // DB挿入時に registered_by カラムを追加
       const { error: dbError } = await supabase.from('lost_items').insert([{
         management_number: managementNumber,
         name: name,
@@ -121,7 +130,6 @@ export default function NewItemPage() {
         photo_url: uploadedUrls[0] || null,
         face_photo_url: uploadedUrls.slice(1).join(',') || null,
         user_id: user.id,
-        // ここでマイページに設定されている担当者名を保存
         registered_by: user.user_metadata?.manager_name || '未設定'
       }]);
 
@@ -168,6 +176,11 @@ export default function NewItemPage() {
               </button>
             )}
           </div>
+
+          {/* ★追加：AI解析が終わったらPDF生成UIを表示する */}
+          {aiRawResult && (
+            <PoliceReportGenerator itemData={aiRawResult} />
+          )}
 
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>品名 *</label><input type="text" value={name} placeholder="例: iPhone 15 Pro" onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
 
