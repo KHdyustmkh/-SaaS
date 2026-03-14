@@ -11,34 +11,36 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [isEditingPolice, setIsEditingPolice] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const router = useRouter();
 
+  // 編集用の一時データ
+  const [editPoliceDate, setEditPoliceDate] = useState('');
+  const [editPoliceNumber, setEditPoliceNumber] = useState('');
+
+  const router = useRouter();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 日付フォーマット関数（警察届出用）
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return null;
+    if (!dateString) return '未登録';
     const date = new Date(dateString);
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   const handleDelete = async () => {
     if (!id) return;
-    const confirmDelete = window.confirm('このアイテムを完全に削除しますか？');
-    if (!confirmDelete) return;
-
+    if (!window.confirm('このアイテムを完全に削除しますか？')) return;
     setUpdating(true);
     try {
       const { error } = await supabase.from('lost_items').delete().eq('id', id);
       if (error) throw error;
-      alert('アイテムを削除しました。ダッシュボードへ戻ります。');
+      alert('削除しました。');
       window.location.href = '/'; 
     } catch (error: any) {
-      alert('削除に失敗しました: ' + error.message);
+      alert('削除失敗: ' + error.message);
     } finally {
       setUpdating(false);
     }
@@ -54,7 +56,36 @@ export default function ItemDetailPage() {
       router.refresh();
       alert(`ステータスを「${newStatus}」に変更しました。`);
     } catch (error: any) {
-      alert('更新に失敗しました: ' + error.message);
+      alert('更新失敗: ' + error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // 【追加】警察情報の保存処理
+  const handleSavePoliceInfo = async () => {
+    if (!id) return;
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('lost_items')
+        .update({
+          reported_to_police_at: editPoliceDate || null,
+          police_receipt_number: editPoliceNumber || null
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setItem((prev: any) => ({
+        ...prev,
+        reported_to_police_at: editPoliceDate || null,
+        police_receipt_number: editPoliceNumber || null
+      }));
+      setIsEditingPolice(false);
+      alert('警察情報を更新しました。');
+    } catch (error: any) {
+      alert('保存に失敗しました: ' + error.message);
     } finally {
       setUpdating(false);
     }
@@ -76,17 +107,13 @@ export default function ItemDetailPage() {
     const fetchItem = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
-
-      const { data, error } = await supabase
-        .from('lost_items')
-        .select('*')
-        .eq('id', id)
-        .single();
-
+      const { data, error } = await supabase.from('lost_items').select('*').eq('id', id).single();
       if (error || !data) {
         router.push('/');
       } else {
         setItem(data);
+        setEditPoliceDate(data.reported_to_police_at ? data.reported_to_police_at.split('T')[0] : '');
+        setEditPoliceNumber(data.police_receipt_number || '');
       }
       setLoading(false);
     };
@@ -99,14 +126,16 @@ export default function ItemDetailPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        {/* ヘッダーボタン類 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
           <button onClick={() => router.push('/')} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#e5e5e7', borderRadius: '10px', fontWeight: 'bold' }}>← 戻る</button>
           <button onClick={handleDelete} disabled={updating} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#ff3b30', color: 'white', borderRadius: '10px', fontWeight: 'bold', opacity: updating ? 0.5 : 1 }}>
-            {updating ? '処理中...' : '🗑️ この情報を完全に削除'}
+            🗑️ 削除
           </button>
         </div>
 
         <div style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
+          {/* 画像セクション */}
           <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', padding: '20px' }}>
             <div style={{ width: '100%', height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
               {allPhotos.length > 0 ? <img src={allPhotos[activePhotoIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <div style={{ color: '#555' }}>画像なし</div>}
@@ -123,15 +152,15 @@ export default function ItemDetailPage() {
           </div>
 
           <div style={{ padding: '40px' }}>
+            {/* タイトル & ステータス */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
                 <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: '0 0 8px 0', color: '#1d1d1f' }}>{item.name}</h1>
                 <div style={{ color: '#86868b', fontSize: '0.9rem' }}>管理番号: {item.management_number}</div>
               </div>
-
               <div style={{ textAlign: 'right' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>ステータス管理</label>
-                <select value={item.status || '保管中'} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '10px 16px', borderRadius: '12px', border: '2px solid #007aff', fontWeight: 'bold', color: '#007aff', backgroundColor: '#fff', cursor: 'pointer' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>ステータス</label>
+                <select value={item.status || '保管中'} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '10px 16px', borderRadius: '12px', border: '2px solid #007aff', fontWeight: 'bold', color: '#007aff', backgroundColor: '#fff' }}>
                   <option value="保管中">🔵 保管中</option>
                   <option value="引き渡し済">🟢 引き渡し済</option>
                   <option value="回収済">🟡 回収済</option>
@@ -145,24 +174,44 @@ export default function ItemDetailPage() {
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
                 
-                {/* 警察関連の情報を追加 */}
-                {(item.reported_to_police_at || item.police_receipt_number) && (
-                  <div style={{ marginTop: '32px', padding: '20px', backgroundColor: '#f0f7ff', borderRadius: '14px', border: '1px solid #cce5ff' }}>
-                    <label style={{ color: '#007aff', fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🚔 警察届出情報</label>
-                    {item.reported_to_police_at && (
+                {/* 【機能強化】警察届出情報の編集・表示エリア */}
+                <div style={{ marginTop: '32px', padding: '20px', backgroundColor: '#f0f7ff', borderRadius: '14px', border: '1px solid #cce5ff', position: 'relative' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <label style={{ color: '#007aff', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>🚔 警察届出情報</label>
+                    {!isEditingPolice ? (
+                      <button onClick={() => setIsEditingPolice(true)} style={{ background: 'none', border: 'none', color: '#007aff', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}>編集する</button>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => setIsEditingPolice(false)} style={{ background: 'none', border: 'none', color: '#86868b', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>キャンセル</button>
+                        <button onClick={handleSavePoliceInfo} disabled={updating} style={{ backgroundColor: '#007aff', border: 'none', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', padding: '4px 10px', borderRadius: '6px' }}>保存</button>
+                      </div>
+                    )}
+                  </div>
+
+                  {!isEditingPolice ? (
+                    <>
                       <div style={{ marginBottom: '12px' }}>
                         <span style={{ color: '#86868b', fontSize: '0.8rem', display: 'block' }}>届出日</span>
                         <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{formatDate(item.reported_to_police_at)}</span>
                       </div>
-                    )}
-                    {item.police_receipt_number && (
                       <div>
                         <span style={{ color: '#86868b', fontSize: '0.8rem', display: 'block' }}>受理番号</span>
-                        <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{item.police_receipt_number}</span>
+                        <span style={{ fontWeight: '600', color: '#1d1d1f' }}>{item.police_receipt_number || '未登録'}</span>
                       </div>
-                    )}
-                  </div>
-                )}
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.75rem', color: '#86868b' }}>届出日</label>
+                        <input type="date" value={editPoliceDate} onChange={(e) => setEditPoliceDate(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d2d2d7' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.75rem', color: '#86868b' }}>受理番号</label>
+                        <input type="text" value={editPoliceNumber} placeholder="第12345号" onChange={(e) => setEditPoliceNumber(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d2d2d7' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </section>
 
               <section>
