@@ -3,6 +3,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+// ★追加：PDF生成コンポーネントのインポート
+import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -14,7 +16,6 @@ export default function ItemDetailPage() {
   const [isEditingPolice, setIsEditingPolice] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
-  // 編集用の一時データ
   const [editPoliceDate, setEditPoliceDate] = useState('');
   const [editPoliceNumber, setEditPoliceNumber] = useState('');
 
@@ -62,7 +63,6 @@ export default function ItemDetailPage() {
     }
   };
 
-  // 【追加】警察情報の保存処理
   const handleSavePoliceInfo = async () => {
     if (!id) return;
     setUpdating(true);
@@ -102,6 +102,18 @@ export default function ItemDetailPage() {
     return photos;
   }, [item]);
 
+  // ★追加：PDFコンポーネントに渡すためのデータ整形
+  const itemDataForPdf = useMemo(() => {
+    if (!item) return null;
+    return {
+      product_name: item.name,
+      category_hint: item.category,
+      color: "", // DBに個別カラムがない場合は空
+      description: item.description || "",
+      image_url: item.photo_url || ""
+    };
+  }, [item]);
+
   useEffect(() => {
     if (!id) return;
     const fetchItem = async () => {
@@ -126,7 +138,6 @@ export default function ItemDetailPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        {/* ヘッダーボタン類 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
           <button onClick={() => router.push('/')} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#e5e5e7', borderRadius: '10px', fontWeight: 'bold' }}>← 戻る</button>
           <button onClick={handleDelete} disabled={updating} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#ff3b30', color: 'white', borderRadius: '10px', fontWeight: 'bold', opacity: updating ? 0.5 : 1 }}>
@@ -135,7 +146,6 @@ export default function ItemDetailPage() {
         </div>
 
         <div style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
-          {/* 画像セクション */}
           <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', padding: '20px' }}>
             <div style={{ width: '100%', height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
               {allPhotos.length > 0 ? <img src={allPhotos[activePhotoIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <div style={{ color: '#555' }}>画像なし</div>}
@@ -152,7 +162,6 @@ export default function ItemDetailPage() {
           </div>
 
           <div style={{ padding: '40px' }}>
-            {/* タイトル & ステータス */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
                 <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: '0 0 8px 0', color: '#1d1d1f' }}>{item.name}</h1>
@@ -174,8 +183,7 @@ export default function ItemDetailPage() {
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
                 
-                {/* 【機能強化】警察届出情報の編集・表示エリア */}
-                <div style={{ marginTop: '32px', padding: '20px', backgroundColor: '#f0f7ff', borderRadius: '14px', border: '1px solid #cce5ff', position: 'relative' }}>
+                <div style={{ marginTop: '32px', padding: '20px', backgroundColor: '#f0f7ff', borderRadius: '14px', border: '1px solid #cce5ff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <label style={{ color: '#007aff', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>🚔 警察届出情報</label>
                     {!isEditingPolice ? (
@@ -212,6 +220,13 @@ export default function ItemDetailPage() {
                     </div>
                   )}
                 </div>
+
+                {/* ★追加：詳細画面でのPDF出力セクション */}
+                {itemDataForPdf && (
+                  <div style={{ marginTop: '20px' }}>
+                    <PoliceReportGenerator itemData={itemDataForPdf} />
+                  </div>
+                )}
               </section>
 
               <section>
