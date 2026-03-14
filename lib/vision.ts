@@ -10,8 +10,8 @@ export async function analyzeImage(base64Image: string) {
     };
   }
 
-  // 修正箇所：モデル名を「gemini-1.5-flash-latest」と明示的に指定
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+  // 修正箇所：提供終了した 1.5-flash から、現在稼働中の最新モデル「gemini-2.5-flash」へ変更
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
