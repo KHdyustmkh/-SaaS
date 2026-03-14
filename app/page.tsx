@@ -21,6 +21,10 @@ export default function Dashboard() {
   const router = useRouter();
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // 【新機能】検索状態の管理
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deadlineFilter, setDeadlineFilter] = useState('すべて');
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,15 +61,37 @@ export default function Dashboard() {
     };
   };
 
-  // 【機能維持】ステータス別アイテム分類
+  // 【戦略的強化】フィルタリングロジックの統合
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      // 1. キーワード検索（品名、管理番号、カテゴリ、場所を網羅）
+      const matchesQuery = 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.management_number?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.location.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // 2. 期限フィルター
+      const deadline = getDeadlineInfo(item);
+      let matchesDeadline = true;
+      if (deadlineFilter === '7日以内') {
+        matchesDeadline = !!(deadline && deadline.remaining <= 7 && deadline.remaining > 0);
+      } else if (deadlineFilter === '期限切れ') {
+        matchesDeadline = !!(deadline && deadline.remaining <= 0);
+      }
+
+      return matchesQuery && matchesDeadline;
+    });
+  }, [items, searchQuery, deadlineFilter]);
+
+  // 【機能維持】フィルタリング後のステータス別分類
   const stats = {
-    custodyItems: items.filter(i => !i.status || i.status === '保管中'),
-    returnedItems: items.filter(i => i.status === '引き渡し済'),
-    collectedItems: items.filter(i => i.status === '回収済'),
-    disposedItems: items.filter(i => i.status === '廃棄済'),
+    custodyItems: filteredItems.filter(i => !i.status || i.status === '保管中'),
+    returnedItems: filteredItems.filter(i => i.status === '引き渡し済'),
+    collectedItems: filteredItems.filter(i => i.status === '回収済'),
+    disposedItems: filteredItems.filter(i => i.status === '廃棄済'),
   };
 
-  // 【機能維持】期限が近い順に抽出
   const urgentItems = useMemo(() => {
     return items
       .filter(i => (!i.status || i.status === '保管中') && !i.reported_to_police_at)
@@ -88,26 +114,38 @@ export default function Dashboard() {
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         
-        {/* 【修正】検索窓レイアウト（画像での重なり問題を物理的に解消） */}
+        {/* 【修正】検索ロジックとの紐付け */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'end' }}>
             <div style={{ width: '100%' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>クイック検索</label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>🔍</span>
-                <input type="text" placeholder="品名、管理番号で検索..." style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '16px', boxSizing: 'border-box', backgroundColor: '#f5f5f7', outline: 'none' }} />
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="品名、管理番号、場所で検索..." 
+                  style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '16px', boxSizing: 'border-box', backgroundColor: '#f5f5f7', outline: 'none' }} 
+                />
               </div>
             </div>
             <div style={{ width: '100%', maxWidth: '200px' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
-              <select style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '0.9rem', outline: 'none' }}>
-                <option>すべての期限</option><option>あと7日以内</option><option>期限切れ</option>
+              <select 
+                value={deadlineFilter}
+                onChange={(e) => setDeadlineFilter(e.target.value)}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '0.9rem', outline: 'none' }}
+              >
+                <option value="すべて">すべての期限</option>
+                <option value="7日以内">あと7日以内</option>
+                <option value="期限切れ">期限切れ</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* 統計カード */}
+        {/* 統計カード (フィルタリング後の件数を表示) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
           <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => router.push('/items/list?status=保管中')} />
           <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => router.push('/items/list?status=引き渡し済')} />
@@ -115,13 +153,21 @@ export default function Dashboard() {
           <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
-        {/* 各ステータスの写真付きカードリスト（完全復元） */}
+        {/* 検索結果ゼロ時の表示 */}
+        {filteredItems.length === 0 && !loading && (
+          <div style={{ textAlign: 'center', padding: '60px', color: '#86868b' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔎</div>
+            <p>条件に一致するアイテムが見つかりません</p>
+          </div>
+        )}
+
+        {/* 各ステータスのリスト */}
         <StatusSection title="📦 保管中" items={stats.custodyItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} />
         <StatusSection title="🤝 引き渡し済" items={stats.returnedItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=引き渡し済')} />
         <StatusSection title="🚛 回収済" items={stats.collectedItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=回収済')} />
         <StatusSection title="🗑️ 廃棄済" items={stats.disposedItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=廃棄済')} />
 
-        {/* 期限要約リスト */}
+        {/* 期限要約リスト（これは全体からの通知なので、検索には連動させないのが戦略的に正解） */}
         <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginTop: '20px' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '20px' }}>警察届出の期限間近</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', backgroundColor: '#f5f5f7' }}>
@@ -145,6 +191,7 @@ export default function Dashboard() {
   );
 }
 
+// Sub-components (StatusSection, StatCard) は元のロジックを維持
 function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: string, items: LostItem[], onSeeAll: () => void, getDeadlineInfo?: (item: LostItem) => any }) {
   const router = useRouter();
   if (items.length === 0) return null;
