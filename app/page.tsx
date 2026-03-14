@@ -21,11 +21,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  const [userInfo, setUserInfo] = useState<{
-    email: string | null;
-    facilityName: string;
-  }>({ email: null, facilityName: '読み込み中...' });
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [deadlineFilter, setDeadlineFilter] = useState('すべての期限');
@@ -38,12 +34,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserInfo({
-          email: user.email ?? null,
-          facilityName: user.user_metadata?.facility_name || '未設定の施設'
-        });
-      }
+      if (user) setUserEmail(user.email ?? null);
 
       const { data, error } = await supabase
         .from('lost_items')
@@ -110,18 +101,16 @@ export default function Dashboard() {
           <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderLeft: '1px solid #d2d2d7', paddingLeft: '12px' }}>
              <div style={{ width: '32px', height: '32px', backgroundColor: '#ff4081', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>
-               {userInfo.email ? userInfo.email[0].toUpperCase() : 'U'}
+               {userEmail ? userEmail[0].toUpperCase() : 'U'}
              </div>
-             <span style={{ fontSize: '0.8rem', color: '#86868b' }}>{userInfo.email || 'ゲスト'}</span>
+             <span style={{ fontSize: '0.8rem', color: '#86868b' }}>{userEmail || 'ゲスト'}</span>
           </div>
         </div>
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        {/* 【修正箇所】施設名のみを表示し、担当者名・メール・ボタンを削除 */}
-        <div style={{ margin: '20px 0' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0 }}>{userInfo.facilityName}</h1>
-        </div>
+        {/* 【修正】指示された全ての動的表示（施設名・担当者等）とボタンを削除 */}
+        <div style={{ height: '24px' }} />
 
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', gap: '16px' }}>
