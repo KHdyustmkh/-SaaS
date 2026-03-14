@@ -22,6 +22,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   
   const [userInfo, setUserInfo] = useState<{
     email: string | null;
@@ -36,6 +37,14 @@ export default function Dashboard() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  // 期限計算ロジックを共通化
+  const calculateRemainingDays = (foundAt: string) => {
+    const foundDate = new Date(foundAt);
+    const today = new Date();
+    const diffTime = today.getTime() - foundDate.getTime();
+    return 7 - Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -58,17 +67,14 @@ export default function Dashboard() {
         const fetchedItems = data as LostItem[];
         setItems(fetchedItems);
 
-        // 【アラート機能】残り3日以下のアイテムがあればポップアップを出す
+        // 期限間近（残り3日以下）のアイテムを判定
         const urgentItems = fetchedItems.filter((item) => {
           if (item.status !== '保管中' || item.reported_to_police_at) return false;
-          const foundDate = new Date(item.found_at);
-          const diffTime = new Date().getTime() - foundDate.getTime();
-          const remaining = 7 - Math.floor(diffTime / (1000 * 60 * 60 * 24));
-          return remaining <= 3; // 残り3日、2日、1日、当日、期限切れが対象
+          return calculateRemainingDays(item.found_at) <= 3;
         });
 
         if (urgentItems.length > 0) {
-          alert(`⚠️ 警察届出の猶予が少なくなっています\n\n残り3日以内、または期限切れのアイテムが ${urgentItems.length} 件あります。\n至急、対応状況を確認してください。`);
+          alert(`⚠️ 警察届出の猶予が少なくなっています\n\n残り3日以内、または期限切れのアイテムが ${urgentItems.length} 件あります。\n「通知」ボタンから詳細を確認してください。`);
         }
       }
       setLoading(false);
@@ -76,13 +82,17 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [supabase]);
 
+  // 通知対象のアイテムを抽出
+  const urgentNotifications = useMemo(() => {
+    return items.filter(item => {
+      if (item.status !== '保管中' || item.reported_to_police_at) return false;
+      return calculateRemainingDays(item.found_at) <= 3;
+    });
+  }, [items]);
+
   const getDeadlineInfo = (item: LostItem) => {
     if (item.status !== '保管中' || item.reported_to_police_at) return null;
-    const foundDate = new Date(item.found_at);
-    const today = new Date();
-    const diffTime = today.getTime() - foundDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const remaining = 7 - diffDays;
+    const remaining = calculateRemainingDays(item.found_at);
 
     let label = "";
     let color = "";
@@ -141,11 +151,52 @@ export default function Dashboard() {
             <span style={{ fontWeight: '700', color: '#1d1d1f' }}>{userInfo.facilityName}</span>
             <span style={{ color: '#d2d2d7' }}>|</span>
             <span style={{ color: '#1d1d1f' }}>担当: {userInfo.staffName} 様</span>
-            <span style={{ color: '#d2d2d7' }}>|</span>
-            <span style={{ color: '#86868b' }}>{userInfo.email}</span>
           </div>
         </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* 通知ボタン */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setShowNotificationModal(!showNotificationModal)}
+              style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              🔔 通知
+              {urgentNotifications.length > 0 && (
+                <span style={{ backgroundColor: '#ff3b30', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                  {urgentNotifications.length}
+                </span>
+              )}
+            </button>
+
+            {/* 通知確認パネル */}
+            {showNotificationModal && (
+              <div style={{ position: 'absolute', top: '45px', right: 0, width: '300px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', border: '1px solid #d2d2d7', padding: '16px', zIndex: 200 }}>
+                <div style={{ fontWeight: 'bold', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '10px', fontSize: '0.9rem' }}>至急対応が必要なアイテム</div>
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {urgentNotifications.length === 0 ? (
+                    <div style={{ fontSize: '0.8rem', color: '#86868b', textAlign: 'center', padding: '20px 0' }}>現在、期限間近のアイテムはありません。</div>
+                  ) : (
+                    urgentNotifications.map(item => (
+                      <div 
+                        key={item.id} 
+                        onClick={() => router.push(`/items/${item.id}`)}
+                        style={{ padding: '10px', borderRadius: '8px', cursor: 'pointer', marginBottom: '8px', backgroundColor: '#fff5f5', border: '1px solid #ffebeb' }}
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#ffe0e0')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#fff5f5')}
+                      >
+                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#1d1d1f' }}>{item.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#ff3b30', fontWeight: '600' }}>
+                          残り {calculateRemainingDays(item.found_at)} 日
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500' }}>マイページ</button>
           <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
         </div>
