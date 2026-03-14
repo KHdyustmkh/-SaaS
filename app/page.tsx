@@ -15,6 +15,7 @@ interface LostItem {
   management_number?: string;
   reported_to_police_at?: string;
   created_at: string;
+  registered_by?: string; // 型定義に登録者名を追加
 }
 
 export default function Dashboard() {
@@ -103,8 +104,8 @@ export default function Dashboard() {
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
+      {/* 統合ヘッダー：1行表示 */}
       <header style={{ backgroundColor: 'white', padding: '10px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
-        
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => router.push('/')}>
             <div style={{ backgroundColor: '#007aff', color: 'white', padding: '6px', borderRadius: '6px' }}>🔳</div>
@@ -130,7 +131,7 @@ export default function Dashboard() {
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         <div style={{ height: '24px' }} />
 
-        {/* 検索・フィルターエリアの修正：flex-growとmax-widthで幅を制御 */}
+        {/* 検索・フィルターエリア：幅の適正化 */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
             <div style={{ flex: '0 1 600px' }}>
@@ -174,7 +175,6 @@ export default function Dashboard() {
   );
 }
 
-// 以下、StatusSection および StatCard コンポーネントは変更なしのため省略（前のコードと同一のものを維持してください）
 function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: string, items: LostItem[], onSeeAll: () => void, getDeadlineInfo?: (item: LostItem) => any }) {
   const router = useRouter();
   if (items.length === 0) return null;
@@ -196,6 +196,10 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{item.name}</div>
                 <div style={{ fontSize: '0.7rem', color: '#86868b' }}>#{item.management_number || '---'}</div>
+                {/* 登録担当者名の表示エリアを追加 */}
+                <div style={{ fontSize: '0.7rem', color: '#007aff', marginTop: '4px', fontWeight: '600' }}>
+                  担当: {item.registered_by || '未設定'} 様
+                </div>
               </div>
             </div>
           );

@@ -55,29 +55,20 @@ export default function NewItemPage() {
     setImagePreviews(newPreviews);
   };
 
-  // 【機能強化版】AI解析ハンドラー
   const handleAIAnalysis = async () => {
     if (imageFiles.length === 0) return;
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
-      // lib/vision.ts から JSON オブジェクトを受け取る
       const aiResult = await analyzeImage(base64); 
-
-      // 1. 品名（固有名詞）をセット
       setName(aiResult.product_name || "");
-
-      // 2. 詳細説明に色や特徴を自動入力
       const autoDesc = `色: ${aiResult.color}\n特徴: ${aiResult.description}`;
       setDescription(autoDesc);
-
-      // 3. カテゴリーツリーへの自動マッピング
       const targetHint = aiResult.category_hint || "";
       outerLoop:
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
           for (const type of CATEGORY_TREE[main][sub]) {
-            // AIのヒントとカテゴリーマスターが部分一致するか確認
             if (targetHint.includes(type) || type.includes(targetHint)) {
               setMainCategory(main);
               setSubCategory(sub);
@@ -100,6 +91,7 @@ export default function NewItemPage() {
     setLoading(true);
     setErrorMsg(null);
     
+    // ユーザーメタデータ（manager_name）を取得
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push('/login'); return; }
 
@@ -117,6 +109,7 @@ export default function NewItemPage() {
 
       const combinedCategory = `${mainCategory} / ${subCategory} / ${itemType}`;
 
+      // DB挿入時に registered_by カラムを追加
       const { error: dbError } = await supabase.from('lost_items').insert([{
         management_number: managementNumber,
         name: name,
@@ -127,7 +120,9 @@ export default function NewItemPage() {
         description: description,
         photo_url: uploadedUrls[0] || null,
         face_photo_url: uploadedUrls.slice(1).join(',') || null,
-        user_id: user.id
+        user_id: user.id,
+        // ここでマイページに設定されている担当者名を保存
+        registered_by: user.user_metadata?.manager_name || '未設定'
       }]);
 
       if (dbError) throw new Error(`DB登録エラー: ${dbError.message}`);
