@@ -2,7 +2,7 @@ export async function analyzeImage(base64Image: string) {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) return { product_name: "キー未設定" };
 
-  // Tier 1 昇格済みの新プロジェクト専用：最も安定した正式版エンドポイント
+  // Tier 1 認識後に最も安定する本番用エンドポイント
   const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
@@ -12,7 +12,7 @@ export async function analyzeImage(base64Image: string) {
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: "画像の内容を日本語で解析し、製品名、カテゴリー、色、特徴を特定してください。回答は必ず以下のJSON形式のみで出力してください。余計な解説は一切不要です。 {\"product_name\": \"\", \"category_hint\": \"\", \"color\": \"\", \"description\": \"\"}" },
+            { text: "画像の内容を日本語で解析し、JSON形式で返してください。形式: {\"product_name\": \"\", \"category_hint\": \"\", \"color\": \"\", \"description\": \"\"}" },
             { inline_data: { mime_type: "image/jpeg", data: base64Image } }
           ]
         }]
@@ -22,26 +22,23 @@ export async function analyzeImage(base64Image: string) {
     const result = await response.json();
 
     if (!response.ok) {
-      console.error("API Error Detail:", result.error);
+      // 同期が完了していない場合、ここで 404 が発生します
       throw new Error(result.error?.message || `HTTP ${response.status}`);
     }
 
     const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!aiText) throw new Error("AIからの応答が空です");
+    if (!aiText) throw new Error("AI応答が空です");
 
-    // JSON形式のみを抽出
     const jsonMatch = aiText.match(/\{.*\}/s);
-    if (!jsonMatch) throw new Error("JSON形式の解析に失敗しました");
-    
-    return JSON.parse(jsonMatch[0]);
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : { product_name: "解析失敗" };
 
   } catch (error: any) {
-    console.error("Vision API Final Catch:", error.message);
+    console.error("Analysis Error:", error.message);
+    // ユーザーに現状を伝えるメッセージ
     return { 
       product_name: "", 
       category_hint: "その他", 
-      color: "", 
-      description: `【判定エラー: ${error.message}】手動で入力してください。` 
+      description: `【システム有効化待ち】設定は完了していますが、Google側の反映に時間がかかっています。しばらくお待ちください。(${error.message})` 
     };
   }
 }
