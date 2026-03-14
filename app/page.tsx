@@ -55,14 +55,27 @@ export default function Dashboard() {
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        setItems(data as LostItem[]);
+        const fetchedItems = data as LostItem[];
+        setItems(fetchedItems);
+
+        // 【アラート機能】残り3日以下のアイテムがあればポップアップを出す
+        const urgentItems = fetchedItems.filter((item) => {
+          if (item.status !== '保管中' || item.reported_to_police_at) return false;
+          const foundDate = new Date(item.found_at);
+          const diffTime = new Date().getTime() - foundDate.getTime();
+          const remaining = 7 - Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          return remaining <= 3; // 残り3日、2日、1日、当日、期限切れが対象
+        });
+
+        if (urgentItems.length > 0) {
+          alert(`⚠️ 警察届出の猶予が少なくなっています\n\n残り3日以内、または期限切れのアイテムが ${urgentItems.length} 件あります。\n至急、対応状況を確認してください。`);
+        }
       }
       setLoading(false);
     };
     fetchDashboardData();
   }, [supabase]);
 
-  // 【最終修正】期限表示：戦略的理由に基づき「未完了」と「残り日数」を併記
   const getDeadlineInfo = (item: LostItem) => {
     if (item.status !== '保管中' || item.reported_to_police_at) return null;
     const foundDate = new Date(item.found_at);
@@ -84,7 +97,6 @@ export default function Dashboard() {
       label = "🔥 届出猶予：残り2日";
       color = "#ff9500";
     } else {
-      // 指定の「警察届出未完了」に、優先順位判断のための「日数」を付与
       label = `⏳ 警察届出未完了（残り${remaining}日）`;
       color = "#34c759";
     }
