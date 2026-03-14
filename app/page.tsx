@@ -102,42 +102,39 @@ export default function Dashboard() {
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
-      {/* メインヘッダー（固定） */}
+      {/* 指示に基づき、すべての要素をこの1行のヘッダーに集約 */}
       <header style={{ backgroundColor: 'white', padding: '10px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ backgroundColor: '#007aff', color: 'white', padding: '6px', borderRadius: '6px' }}>🔳</div>
-          <span style={{ fontWeight: '700', fontSize: '1rem' }}>拾得物管理ポータル</span>
+        
+        {/* 左側：ロゴとユーザー/施設詳細情報 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ backgroundColor: '#007aff', color: 'white', padding: '6px', borderRadius: '6px' }}>🔳</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem' }}>
+            <span style={{ fontWeight: '700', color: '#1d1d1f' }}>{userInfo.facilityName}</span>
+            <span style={{ color: '#d2d2d7' }}>|</span>
+            <span style={{ color: '#1d1d1f' }}>担当: {userInfo.staffName}</span>
+            <span style={{ color: '#d2d2d7' }}>|</span>
+            <span style={{ color: '#86868b' }}>{userInfo.email}</span>
+          </div>
         </div>
+
+        {/* 右側：アクションボタンとアイコン */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer' }}>ダッシュボード</button>
+          <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer' }}>マイページ</button>
           <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
+          <div style={{ width: '32px', height: '32px', backgroundColor: '#ff4081', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', marginLeft: '8px' }}>
+            {userInfo.email ? userInfo.email[0].toUpperCase() : 'U'}
+          </div>
         </div>
       </header>
 
-      {/* サブヘッダー：ロゴとテキストを廃止し、情報を直接表示 */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '0.85rem' }}>
-          <span style={{ fontWeight: '700', color: '#1d1d1f' }}>{userInfo.facilityName}</span>
-          <span style={{ color: '#d2d2d7' }}>|</span>
-          <span style={{ color: '#1d1d1f' }}>担当: {userInfo.staffName}</span>
-          <span style={{ color: '#d2d2d7' }}>|</span>
-          <span style={{ color: '#86868b' }}>{userInfo.email}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>マイページ</button>
-          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-             <div style={{ width: '28px', height: '28px', backgroundColor: '#ff4081', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
-               {userInfo.email ? userInfo.email[0].toUpperCase() : 'U'}
-             </div>
-             <span style={{ fontSize: '0.8rem', color: '#86868b' }}>{userInfo.email}</span>
-          </div>
-        </div>
-      </div>
+      {/* サブヘッダー行は完全に削除 */}
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         <div style={{ height: '24px' }} />
 
+        {/* 検索・フィルター */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', gap: '16px' }}>
             <div style={{ flex: 1 }}>
@@ -168,6 +165,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* 統計エリア */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
           <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => {}} />
           <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => {}} />
