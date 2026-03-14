@@ -184,10 +184,17 @@ export default function Dashboard() {
           <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
-        {/* 【修正：物理的な幅の強制ロック】 */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '24px', alignItems: 'flex-end' }}>
-            <div style={{ width: '400px', minWidth: '200px', flexShrink: 0 }}>
+        {/* 検索・フィルターエリア：配置の厳格化 */}
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'row', 
+            justifyContent: 'space-between', 
+            alignItems: 'flex-end', 
+            width: '100%',
+            gap: '32px' 
+          }}>
+            <div style={{ flex: '1', maxWidth: '450px' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>クイック検索</label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>🔍</span>
@@ -207,6 +214,7 @@ export default function Dashboard() {
                 />
               </div>
             </div>
+
             <div style={{ width: '240px', flexShrink: 0 }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
               <select 
