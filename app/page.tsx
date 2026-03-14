@@ -115,6 +115,7 @@ export default function Dashboard() {
       const matchesQuery = 
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.management_number?.toLowerCase().includes(searchQuery.toLowerCase()));
+      
       const deadline = getDeadlineInfo(item);
       let matchesDeadline = true;
       if (deadlineFilter === 'あと7日以内') {
@@ -122,15 +123,16 @@ export default function Dashboard() {
       } else if (deadlineFilter === '期限切れ') {
         matchesDeadline = !!(deadline && deadline.remaining <= 0);
       }
+      
       return matchesQuery && matchesDeadline;
     });
   }, [items, searchQuery, deadlineFilter]);
 
   const stats = {
-    custodyItems: filteredItems.filter(i => !i.status || i.status === '保管中'),
-    returnedItems: filteredItems.filter(i => i.status === '引き渡し済'),
-    collectedItems: filteredItems.filter(i => i.status === '回収済'),
-    disposedItems: filteredItems.filter(i => i.status === '廃棄済'),
+    custodyItems: items.filter(i => !i.status || i.status === '保管中'),
+    returnedItems: items.filter(i => i.status === '引き渡し済'),
+    collectedItems: items.filter(i => i.status === '回収済'),
+    disposedItems: items.filter(i => i.status === '廃棄済'),
   };
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
@@ -182,6 +184,7 @@ export default function Dashboard() {
           <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
+        {/* 【復元】検索および期限フィルターセクション */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
             <div style={{ flex: '0 1 600px' }}>
@@ -191,10 +194,19 @@ export default function Dashboard() {
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="品名、管理番号で検索..." style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '16px', backgroundColor: '#f5f5f7' }} />
               </div>
             </div>
+            {/* 期限フィルターの復元 */}
+            <div style={{ width: '240px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
+              <select value={deadlineFilter} onChange={(e) => setDeadlineFilter(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '16px' }}>
+                <option>すべての期限</option>
+                <option>あと7日以内</option>
+                <option>期限切れ</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <StatusSection title="✨ 新着の拾得物" items={stats.custodyItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} />
+        <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} />
       </main>
     </div>
   );
