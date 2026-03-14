@@ -187,14 +187,13 @@ export default function Dashboard() {
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ 
             display: 'flex', 
-            flexDirection: 'row', 
+            flexFlow: 'row wrap', // 修正：確実に折り返すよう指定
             justifyContent: 'space-between', 
             alignItems: 'flex-end', 
             width: '100%',
-            gap: '32px',
-            flexWrap: 'wrap' // スマホでの折り返しを許可し、はみ出しを防止
+            gap: '20px' // 修正：間隔を少し詰め、はみ出しリスクを低減
           }}>
-            <div style={{ flex: '1', minWidth: '280px', maxWidth: '450px' }}>
+            <div style={{ flex: '1 1 300px', maxWidth: '100%', boxSizing: 'border-box' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>クイック検索</label>
               <div style={{ position: 'relative', width: '100%' }}>
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>🔍</span>
@@ -210,13 +209,14 @@ export default function Dashboard() {
                     border: '1px solid #d2d2d7', 
                     fontSize: '16px', 
                     backgroundColor: '#f5f5f7',
-                    boxSizing: 'border-box' // 修正：パディングが幅を突き破らないように設定
+                    boxSizing: 'border-box', // 修正：パディングを内側に含める
+                    display: 'block'
                   }} 
                 />
               </div>
             </div>
 
-            <div style={{ width: '240px', flexShrink: 0, flexGrow: 1 }}>
+            <div style={{ flex: '1 1 200px', maxWidth: '100%', boxSizing: 'border-box' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
               <select 
                 value={deadlineFilter} 
@@ -229,7 +229,8 @@ export default function Dashboard() {
                   backgroundColor: 'white', 
                   fontSize: '16px', 
                   cursor: 'pointer',
-                  boxSizing: 'border-box' // 修正：セレクトボックスのはみ出し防止
+                  boxSizing: 'border-box', // 修正
+                  display: 'block'
                 }}
               >
                 <option>すべての期限</option>
@@ -255,7 +256,7 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
         <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>{title}</h2>
         <button onClick={onSeeAll} style={{ color: '#007aff', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>すべて見る ＞</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
         {items.map((item) => {
           const deadline = getDeadlineInfo(item);
           return (
