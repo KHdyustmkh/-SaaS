@@ -3,7 +3,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-// ★追加：PDF生成コンポーネントのインポート
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
 
 export default function ItemDetailPage() {
@@ -102,13 +101,14 @@ export default function ItemDetailPage() {
     return photos;
   }, [item]);
 
-  // ★追加：PDFコンポーネントに渡すためのデータ整形
+  // ★修正: location を追加して子コンポーネントに渡す
   const itemDataForPdf = useMemo(() => {
     if (!item) return null;
     return {
       product_name: item.name,
       category_hint: item.category,
-      color: "", // DBに個別カラムがない場合は空
+      location: item.location || "", 
+      color: "", 
       description: item.description || "",
       image_url: item.photo_url || ""
     };
@@ -221,7 +221,6 @@ export default function ItemDetailPage() {
                   )}
                 </div>
 
-                {/* ★追加：詳細画面でのPDF出力セクション */}
                 {itemDataForPdf && (
                   <div style={{ marginTop: '20px' }}>
                     <PoliceReportGenerator itemData={itemDataForPdf} />
