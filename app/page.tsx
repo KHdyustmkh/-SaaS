@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   const [userInfo, setUserInfo] = useState<{
     email: string | null;
@@ -46,6 +47,11 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    // レスポンシブ検知ロジックを維持
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
     const fetchDashboardData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -76,6 +82,7 @@ export default function Dashboard() {
       setLoading(false);
     };
     fetchDashboardData();
+    return () => window.removeEventListener('resize', handleResize);
   }, [supabase]);
 
   const urgentNotifications = useMemo(() => {
@@ -139,22 +146,22 @@ export default function Dashboard() {
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
-      <header style={{ backgroundColor: 'white', padding: '10px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+      <header style={{ backgroundColor: 'white', padding: isMobile ? '10px 16px' : '10px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '20px' }}>
           <div style={{ cursor: 'pointer' }} onClick={() => router.push('/')}>
             <div style={{ backgroundColor: '#007aff', color: 'white', padding: '6px', borderRadius: '6px' }}>🔳</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0' : '12px', fontSize: isMobile ? '0.75rem' : '0.85rem' }}>
             <span style={{ fontWeight: '700', color: '#1d1d1f' }}>{userInfo.facilityName}</span>
-            <span style={{ color: '#d2d2d7' }}>|</span>
+            {!isMobile && <span style={{ color: '#d2d2d7' }}>|</span>}
             <span style={{ color: '#1d1d1f' }}>担当: {userInfo.staffName} 様</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px' }}>
           <div style={{ position: 'relative' }}>
-            <button onClick={() => setShowNotificationModal(!showNotificationModal)} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              🔔 通知 {urgentNotifications.length > 0 && <span style={{ backgroundColor: '#ff3b30', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.7rem', fontWeight: 'bold' }}>{urgentNotifications.length}</span>}
+            <button onClick={() => setShowNotificationModal(!showNotificationModal)} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: isMobile ? '8px' : '8px 16px', borderRadius: '10px', fontSize: isMobile ? '0.8rem' : '0.9rem', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              🔔 {isMobile ? '' : '通知'} {urgentNotifications.length > 0 && <span style={{ backgroundColor: '#ff3b30', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.7rem', fontWeight: 'bold' }}>{urgentNotifications.length}</span>}
             </button>
             {showNotificationModal && (
               <div style={{ position: 'absolute', top: '45px', right: 0, width: '300px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', border: '1px solid #d2d2d7', padding: '16px', zIndex: 200 }}>
@@ -170,30 +177,31 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500' }}>マイページ</button>
-          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
+          {!isMobile && <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500' }}>マイページ</button>}
+          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: isMobile ? '8px 12px' : '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '1rem' }}>+ 新規登録</button>
         </div>
       </header>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', margin: '24px 0' }}>
-          <StatCard title="🚨 届出未完了" count={unsubmittedCount} color="#5856d6" onClick={() => router.push('/items/list?unsubmitted=true')} />
-          <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => router.push('/items/list?status=保管中')} />
-          <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => router.push('/items/list?status=引き渡し済')} />
-          <StatCard title="回収済" count={stats.collectedItems.length} color="#8e8e93" onClick={() => router.push('/items/list?status=回収済')} />
-          <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
+          <StatCard title="🚨 届出未完了" count={unsubmittedCount} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?unsubmitted=true')} />
+          <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=保管中')} />
+          <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" isMobile={isMobile} onClick={() => router.push('/items/list?status=引き渡し済')} />
+          <StatCard title="回収済" count={stats.collectedItems.length} color="#8e8e93" isMobile={isMobile} onClick={() => router.push('/items/list?status=回収済')} />
+          <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" isMobile={isMobile} onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
-        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
+        {/* 検索窓セクション：見た目を維持し、はみ出しのみを修正 */}
+        <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ 
             display: 'flex', 
-            flexFlow: 'row wrap', // 修正：確実に折り返すよう指定
+            flexDirection: isMobile ? 'column' : 'row', 
             justifyContent: 'space-between', 
-            alignItems: 'flex-end', 
+            alignItems: isMobile ? 'stretch' : 'flex-end', 
             width: '100%',
-            gap: '20px' // 修正：間隔を少し詰め、はみ出しリスクを低減
+            gap: isMobile ? '16px' : '32px'
           }}>
-            <div style={{ flex: '1 1 300px', maxWidth: '100%', boxSizing: 'border-box' }}>
+            <div style={{ flex: '1' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>クイック検索</label>
               <div style={{ position: 'relative', width: '100%' }}>
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>🔍</span>
@@ -209,14 +217,13 @@ export default function Dashboard() {
                     border: '1px solid #d2d2d7', 
                     fontSize: '16px', 
                     backgroundColor: '#f5f5f7',
-                    boxSizing: 'border-box', // 修正：パディングを内側に含める
-                    display: 'block'
+                    boxSizing: 'border-box' // 重要：はみ出し防止
                   }} 
                 />
               </div>
             </div>
 
-            <div style={{ flex: '1 1 200px', maxWidth: '100%', boxSizing: 'border-box' }}>
+            <div style={{ width: isMobile ? '100%' : '240px' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
               <select 
                 value={deadlineFilter} 
@@ -229,8 +236,7 @@ export default function Dashboard() {
                   backgroundColor: 'white', 
                   fontSize: '16px', 
                   cursor: 'pointer',
-                  boxSizing: 'border-box', // 修正
-                  display: 'block'
+                  boxSizing: 'border-box' // 重要：はみ出し防止
                 }}
               >
                 <option>すべての期限</option>
@@ -241,13 +247,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} />
+        <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} isMobile={isMobile} />
       </main>
     </div>
   );
 }
 
-function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: string, items: LostItem[], onSeeAll: () => void, getDeadlineInfo: (item: LostItem) => any }) {
+function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { title: string, items: LostItem[], onSeeAll: () => void, getDeadlineInfo: (item: LostItem) => any, isMobile: boolean }) {
   const router = useRouter();
   if (items.length === 0) return null;
   return (
@@ -256,13 +262,13 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
         <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>{title}</h2>
         <button onClick={onSeeAll} style={{ color: '#007aff', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>すべて見る ＞</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
         {items.map((item) => {
           const deadline = getDeadlineInfo(item);
           return (
             <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', border: '1px solid #d2d2d7', cursor: 'pointer', position: 'relative' }}>
               {deadline && <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '4px 10px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '800', zIndex: 1 }}>{deadline.label}</div>}
-              <div style={{ width: '100%', height: '180px', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: isMobile ? '120px' : '180px', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                 {item.photo_url ? (
                   <img 
                     src={item.photo_url} 
@@ -281,7 +287,7 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{item.name}</div>
                 <div style={{ fontSize: '0.7rem', color: '#86868b' }}>#{item.management_number || '---'}</div>
-                <div style={{ fontSize: '0.7rem', color: '#007aff', marginTop: '4px', fontWeight: '600' }}>担当: {item.registered_by || '未設定'} 様</div>
+                {!isMobile && <div style={{ fontSize: '0.7rem', color: '#007aff', marginTop: '4px', fontWeight: '600' }}>担当: {item.registered_by || '未設定'} 様</div>}
               </div>
             </div>
           );
@@ -291,11 +297,11 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
   );
 }
 
-function StatCard({ title, count, color, onClick }: { title: string, count: number, color: string, onClick: () => void }) {
+function StatCard({ title, count, color, onClick, isMobile }: { title: string, count: number, color: string, onClick: () => void, isMobile: boolean }) {
   return (
-    <div onClick={onClick} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '20px', border: '1px solid #d2d2d7', cursor: 'pointer' }}>
-      <div style={{ color: '#86868b', fontSize: '0.8rem', fontWeight: '600' }}>{title}</div>
-      <div style={{ fontSize: '2rem', fontWeight: '800', color: color, marginTop: '8px' }}>{count}</div>
+    <div onClick={onClick} style={{ backgroundColor: 'white', padding: isMobile ? '12px' : '20px', borderRadius: isMobile ? '12px' : '20px', border: '1px solid #d2d2d7', cursor: 'pointer' }}>
+      <div style={{ color: '#86868b', fontSize: isMobile ? '0.7rem' : '0.8rem', fontWeight: '600' }}>{title}</div>
+      <div style={{ fontSize: isMobile ? '1.4rem' : '2rem', fontWeight: '800', color: color, marginTop: '8px' }}>{count}</div>
     </div>
   );
 }
