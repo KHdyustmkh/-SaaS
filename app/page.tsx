@@ -21,8 +21,8 @@ export default function Dashboard() {
   const router = useRouter();
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // 【新機能】検索・フィルタリング状態の管理
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [deadlineFilter, setDeadlineFilter] = useState('すべて');
 
@@ -33,6 +33,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchItems = async () => {
+      // ユーザー情報の取得（ヘッダー表示用）
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setUserEmail(user.email ?? null);
+
       const { data, error } = await supabase
         .from('lost_items')
         .select('*')
@@ -46,7 +50,6 @@ export default function Dashboard() {
     fetchItems();
   }, [supabase]);
 
-  // 【機能維持】期限管理ロジック
   const getDeadlineInfo = (item: LostItem) => {
     if (item.status !== '保管中' || item.reported_to_police_at) return null;
     const foundDate = new Date(item.found_at);
@@ -61,7 +64,6 @@ export default function Dashboard() {
     };
   };
 
-  // 【戦略的強化】フィルタリングロジック（品名、管理番号、カテゴリ、場所を網羅）
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const matchesQuery = 
@@ -77,12 +79,10 @@ export default function Dashboard() {
       } else if (deadlineFilter === '期限切れ') {
         matchesDeadline = !!(deadline && deadline.remaining <= 0);
       }
-
       return matchesQuery && matchesDeadline;
     });
   }, [items, searchQuery, deadlineFilter]);
 
-  // 【機能維持】ステータス別アイテム分類
   const stats = {
     custodyItems: filteredItems.filter(i => !i.status || i.status === '保管中'),
     returnedItems: filteredItems.filter(i => i.status === '引き渡し済'),
@@ -90,7 +90,6 @@ export default function Dashboard() {
     disposedItems: filteredItems.filter(i => i.status === '廃棄済'),
   };
 
-  // 【機能維持】期限が近い順に抽出（通知用）
   const urgentItems = useMemo(() => {
     return items
       .filter(i => (!i.status || i.status === '保管中') && !i.reported_to_police_at)
@@ -104,37 +103,49 @@ export default function Dashboard() {
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
-      <header style={{ backgroundColor: 'white', padding: '20px', borderBottom: '1px solid #d2d2d7', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: '700', margin: 0 }}>遺失物管理</h1>
-          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '20px', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
+      {/* 【復元】画像29通りのヘッダー構成 */}
+      <header style={{ backgroundColor: 'white', padding: '12px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ backgroundColor: '#007aff', color: 'white', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔳</div>
+          <span style={{ fontWeight: '700', fontSize: '1.1rem' }}>拾得物管理ポータル</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button onClick={() => router.push('/')} style={{ background: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>ダッシュボード</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+             <div style={{ width: '32px', height: '32px', backgroundColor: '#ff4081', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>
+               {userEmail ? userEmail[0].toUpperCase() : 'U'}
+             </div>
+             <span style={{ fontSize: '0.8rem', color: '#86868b' }}>{userEmail || 'ゲスト'}</span>
+          </div>
+          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#2b62f1', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>新規登録</button>
         </div>
       </header>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        
-        {/* 検索・フィルターセクション */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'end' }}>
-            <div style={{ width: '100%' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>クイック検索</label>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '24px' }}>遺失物管理</h1>
+
+        {/* 検索・フィルター */}
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #e5e5e5' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: '20px', alignItems: 'end' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: '#86868b', marginBottom: '8px' }}>クイック検索</label>
               <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>🔍</span>
+                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#86868b' }}>🔍</span>
                 <input 
                   type="text" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="品名、管理番号、場所で検索..." 
-                  style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '10px', border: '1px solid #d2d2d7', fontSize: '16px', boxSizing: 'border-box', backgroundColor: '#f5f5f7', outline: 'none' }} 
+                  placeholder="品名、管理番号で検索..." 
+                  style={{ width: '100%', padding: '12px 16px 12px 48px', borderRadius: '12px', border: '1px solid #d2d2d7', fontSize: '1rem', backgroundColor: '#f5f5f7' }} 
                 />
               </div>
             </div>
-            <div style={{ width: '100%', maxWidth: '200px' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: '#86868b', marginBottom: '8px' }}>期限フィルター</label>
               <select 
                 value={deadlineFilter}
                 onChange={(e) => setDeadlineFilter(e.target.value)}
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '0.9rem', outline: 'none' }}
+                style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '1rem' }}
               >
                 <option value="すべて">すべての期限</option>
                 <option value="7日以内">あと7日以内</option>
@@ -145,46 +156,30 @@ export default function Dashboard() {
         </div>
 
         {/* 統計カード */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-          <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => router.push('/items/list?status=保管中')} />
-          <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => router.push('/items/list?status=引き渡し済')} />
-          <StatCard title="回収済" count={stats.collectedItems.length} color="#5856d6" onClick={() => router.push('/items/list?status=回収済')} />
-          <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
+          <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => {}} />
+          <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => {}} />
+          <StatCard title="回収済" count={stats.collectedItems.length} color="#34c759" onClick={() => {}} />
+          <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => {}} />
         </div>
 
-        {/* 検索結果ゼロ時の表示 */}
-        {filteredItems.length === 0 && !loading && (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#86868b' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔎</div>
-            <p>条件に一致するアイテムが見つかりません</p>
-          </div>
-        )}
+        {/* 【修正】新着セクション */}
+        <StatusSection title="✨ 新着の拾得物" items={stats.custodyItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} />
 
-        {/* 【修正】セクション名を「新着」に変更 */}
-        <StatusSection 
-          title="✨ 新着の拾得物" 
-          items={stats.custodyItems.slice(0, 4)} 
-          onSeeAll={() => router.push('/items/list?status=保管中')} 
-          getDeadlineInfo={getDeadlineInfo} 
-        />
-        <StatusSection title="🤝 引き渡し済" items={stats.returnedItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=引き渡し済')} />
-        <StatusSection title="🚛 回収済" items={stats.collectedItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=回収済')} />
-        <StatusSection title="🗑️ 廃棄済" items={stats.disposedItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=廃棄済')} />
-
-        {/* 期限要約リスト */}
-        <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginTop: '20px' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '20px' }}>警察届出の期限間近</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', backgroundColor: '#f5f5f7' }}>
+        {/* 期限間近リスト */}
+        <div style={{ marginTop: '40px' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '16px' }}>📦 警察届出の期限間近</h2>
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e5e5e5' }}>
             {urgentItems.length === 0 ? (
-              <div style={{ backgroundColor: 'white', padding: '30px', textAlign: 'center', color: '#86868b' }}>現在、要対応のアイテムはありません</div>
+              <div style={{ padding: '32px', textAlign: 'center', color: '#86868b' }}>要対応のアイテムはありません</div>
             ) : (
               urgentItems.map(item => (
-                <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #f5f5f7' }}>
+                <div key={item.id} style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f5f5f7' }}>
                   <div>
-                    <div style={{ fontWeight: '700', color: '#1d1d1f' }}>{item.name}</div>
+                    <div style={{ fontWeight: '700' }}>{item.name}</div>
                     <div style={{ fontSize: '0.8rem', color: '#86868b' }}>#{item.management_number} | {item.category}</div>
                   </div>
-                  <div style={{ backgroundColor: item.deadline?.color, color: 'white', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '700' }}>{item.deadline?.label}</div>
+                  <div style={{ backgroundColor: item.deadline?.color, color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '700' }}>{item.deadline?.label}</div>
                 </div>
               ))
             )}
@@ -202,21 +197,20 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
     <div style={{ marginBottom: '32px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>{title}</h2>
-        <button onClick={onSeeAll} style={{ color: '#007aff', background: 'none', border: 'none', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem' }}>すべて見る ＞</button>
+        <button onClick={onSeeAll} style={{ color: '#007aff', background: 'none', border: 'none', fontWeight: '600', cursor: 'pointer' }}>すべて見る ＞</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px' }}>
         {items.map((item) => {
           const deadline = getDeadlineInfo ? getDeadlineInfo(item) : null;
           return (
-            <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', cursor: 'pointer', position: 'relative' }}>
-              {deadline && <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', zIndex: 10 }}>{deadline.label}</div>}
-              <div style={{ width: '100%', height: '120px', backgroundColor: '#f5f5f7' }}>
+            <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e5e5e5', cursor: 'pointer', position: 'relative' }}>
+              {deadline && <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: deadline.color, color: 'white', padding: '2px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700' }}>{deadline.label}</div>}
+              <div style={{ width: '100%', height: '140px', backgroundColor: '#f5f5f7' }}>
                 {item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#d2d2d7', fontSize: '2rem' }}>📦</div>}
               </div>
-              <div style={{ padding: '12px' }}>
-                <div style={{ fontSize: '0.65rem', color: '#007aff', fontWeight: '700' }}>{item.category}</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1d1d1f', margin: '4px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</div>
-                <div style={{ fontSize: '0.7rem', color: '#86868b' }}>#{item.management_number || '---'}</div>
+              <div style={{ padding: '16px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#007aff', fontWeight: '700', marginBottom: '4px' }}>{item.category}</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#1d1d1f' }}>{item.name}</div>
               </div>
             </div>
           );
@@ -228,11 +222,11 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
 
 function StatCard({ title, count, color, onClick }: { title: string, count: number, color: string, onClick: () => void }) {
   return (
-    <div onClick={onClick} style={{ backgroundColor: 'white', padding: '24px', borderRadius: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
-      <div style={{ color: '#86868b', fontSize: '0.9rem', fontWeight: '600', marginBottom: '8px' }}>{title}</div>
+    <div onClick={onClick} style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e5e5e5', cursor: 'pointer' }}>
+      <div style={{ color: '#86868b', fontSize: '0.9rem', fontWeight: '600', marginBottom: '12px' }}>{title}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <div style={{ fontSize: '2.5rem', fontWeight: '800', color: color }}>{count}</div>
-        <div style={{ color: '#007aff', fontSize: '0.8rem', fontWeight: '600' }}>詳細 ＞</div>
+        <div style={{ fontSize: '2rem', fontWeight: '800', color: color }}>{count}</div>
+        <div style={{ color: '#007aff', fontSize: '0.85rem', fontWeight: '600' }}>詳細 ＞</div>
       </div>
     </div>
   );
