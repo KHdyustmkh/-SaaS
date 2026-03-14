@@ -22,12 +22,11 @@ export default function Dashboard() {
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // ユーザー・施設情報の管理
   const [userInfo, setUserInfo] = useState<{
     email: string | null;
     facilityName: string;
     staffName: string;
-  }>({ email: null, facilityName: '読み込み中...', staffName: '' });
+  }>({ email: null, facilityName: '読み込み中...', staffName: '読み込み中...' });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [deadlineFilter, setDeadlineFilter] = useState('すべての期限');
@@ -115,20 +114,16 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* 【修正箇所】サブヘッダーの情報を差し替え */}
+      {/* サブヘッダー：ロゴとテキストを廃止し、情報を直接表示 */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ backgroundColor: '#007aff', color: 'white', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔳</div>
-          <div style={{ fontSize: '0.85rem', color: '#1d1d1f', display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <span style={{ fontWeight: '600' }}>{userInfo.facilityName}</span>
-            <span style={{ color: '#d2d2d7' }}>|</span>
-            <span>担当: {userInfo.staffName}</span>
-            <span style={{ color: '#d2d2d7' }}>|</span>
-            <span style={{ color: '#86868b' }}>{userInfo.email}</span>
-          </div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '0.85rem' }}>
+          <span style={{ fontWeight: '700', color: '#1d1d1f' }}>{userInfo.facilityName}</span>
+          <span style={{ color: '#d2d2d7' }}>|</span>
+          <span style={{ color: '#1d1d1f' }}>担当: {userInfo.staffName}</span>
+          <span style={{ color: '#d2d2d7' }}>|</span>
+          <span style={{ color: '#86868b' }}>{userInfo.email}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* ダッシュボードを削除し、マイページを再実装 */}
           <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>マイページ</button>
           <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -143,7 +138,6 @@ export default function Dashboard() {
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         <div style={{ height: '24px' }} />
 
-        {/* 検索・フィルター（維持） */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', gap: '16px' }}>
             <div style={{ flex: 1 }}>
@@ -174,7 +168,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 統計カード（維持） */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
           <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" onClick={() => {}} />
           <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" onClick={() => {}} />
