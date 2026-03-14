@@ -15,7 +15,7 @@ interface LostItem {
   management_number?: string;
   reported_to_police_at?: string;
   created_at: string;
-  registered_by?: string; // 型定義に登録者名を追加
+  registered_by?: string;
 }
 
 export default function Dashboard() {
@@ -62,6 +62,7 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [supabase]);
 
+  // 【最終修正】期限表示：戦略的理由に基づき「未完了」と「残り日数」を併記
   const getDeadlineInfo = (item: LostItem) => {
     if (item.status !== '保管中' || item.reported_to_police_at) return null;
     const foundDate = new Date(item.found_at);
@@ -69,11 +70,26 @@ export default function Dashboard() {
     const diffTime = today.getTime() - foundDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const remaining = 7 - diffDays;
-    return { 
-      remaining, 
-      label: remaining <= 0 ? '期限切れ' : `あと${remaining}日`, 
-      color: remaining <= 0 ? '#ff3b30' : (remaining <= 2 ? '#ff9500' : '#34c759') 
-    };
+
+    let label = "";
+    let color = "";
+
+    if (remaining <= 0) {
+      label = "⚠️ 至急、警察へ届出！";
+      color = "#ff3b30";
+    } else if (remaining === 1) {
+      label = "🚨 明日が届出期限です";
+      color = "#ff3b30";
+    } else if (remaining === 2) {
+      label = "🔥 届出猶予：残り2日";
+      color = "#ff9500";
+    } else {
+      // 指定の「警察届出未完了」に、優先順位判断のための「日数」を付与
+      label = `⏳ 警察届出未完了（残り${remaining}日）`;
+      color = "#34c759";
+    }
+
+    return { remaining, label, color };
   };
 
   const filteredItems = useMemo(() => {
@@ -104,7 +120,6 @@ export default function Dashboard() {
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
-      {/* 統合ヘッダー：1行表示 */}
       <header style={{ backgroundColor: 'white', padding: '10px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => router.push('/')}>
@@ -118,20 +133,14 @@ export default function Dashboard() {
             <span style={{ color: '#86868b' }}>{userInfo.email}</span>
           </div>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500' }}>マイページ</button>
           <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>+ 新規登録</button>
-          <div style={{ width: '32px', height: '32px', backgroundColor: '#ff4081', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', marginLeft: '8px' }}>
-            {userInfo.email ? userInfo.email[0].toUpperCase() : 'U'}
-          </div>
         </div>
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         <div style={{ height: '24px' }} />
-
-        {/* 検索・フィルターエリア：幅の適正化 */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
             <div style={{ flex: '0 1 600px' }}>
@@ -149,11 +158,7 @@ export default function Dashboard() {
             </div>
             <div style={{ width: '240px' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>期限フィルター</label>
-              <select 
-                value={deadlineFilter}
-                onChange={(e) => setDeadlineFilter(e.target.value)}
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '16px', cursor: 'pointer' }}
-              >
+              <select value={deadlineFilter} onChange={(e) => setDeadlineFilter(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', fontSize: '16px' }}>
                 <option>すべての期限</option>
                 <option>あと7日以内</option>
                 <option>期限切れ</option>
@@ -189,17 +194,18 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo }: { title: str
           const deadline = getDeadlineInfo ? getDeadlineInfo(item) : null;
           return (
             <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', border: '1px solid #d2d2d7', cursor: 'pointer', position: 'relative' }}>
-              {deadline && <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '0.65rem' }}>{deadline.label}</div>}
+              {deadline && (
+                <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '4px 10px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '800', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', zIndex: 1 }}>
+                  {deadline.label}
+                </div>
+              )}
               <div style={{ width: '100%', height: '120px', backgroundColor: '#f5f5f7' }}>
                 {item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ textAlign: 'center', lineHeight: '120px' }}>📦</div>}
               </div>
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{item.name}</div>
                 <div style={{ fontSize: '0.7rem', color: '#86868b' }}>#{item.management_number || '---'}</div>
-                {/* 登録担当者名の表示エリアを追加 */}
-                <div style={{ fontSize: '0.7rem', color: '#007aff', marginTop: '4px', fontWeight: '600' }}>
-                  担当: {item.registered_by || '未設定'} 様
-                </div>
+                <div style={{ fontSize: '0.7rem', color: '#007aff', marginTop: '4px', fontWeight: '600' }}>担当: {item.registered_by || '未設定'} 様</div>
               </div>
             </div>
           );
