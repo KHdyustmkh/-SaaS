@@ -184,7 +184,7 @@ export default function Dashboard() {
           <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
-        {/* 【修正箇所】ここからレイアウト修正：他のロジックは完全維持 */}
+        {/* 【修正箇所：レイアウト衝突防止およびタイポ修正】 */}
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', flexDirection: 'row', gap: '24px', alignItems: 'flex-end', width: '100%', minWidth: 0 }}>
             <div style={{ flex: '1 1 0%', minWidth: 0 }}>
@@ -204,7 +204,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        {/* 【修正箇所】ここまで */}
 
         <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} />
       </main>
