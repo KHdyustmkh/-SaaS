@@ -14,6 +14,7 @@ interface PoliceReportProps {
     description: string;
     image_url?: string;
     found_at?: string;
+    registered_by?: string; // ★追加：DBのカラム名と一致
   };
   profileData?: {
     facility_name?: string;
@@ -49,12 +50,10 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const meta = user.user_metadata || {};
-          // デバッグ用ログ：住所が反映されない場合、F12コンソールでこの内容を確認してください
           console.log("【デバッグ】ユーザーメタデータ:", meta); 
           
           setFetchedProfile({
             facilityName: meta.facility_name || '',
-            // 住所の取得先をさらに広げ、漏れを防ぎます
             address: meta.facility_address || meta.address || meta.facility_location || meta.location || meta.postal_address || '',
             managerName: meta.manager_name || ''
           });
@@ -89,6 +88,10 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
     pdf.addImage(imgData, 'PNG', (pdfWidth - imgWidth) / 2, 0, imgWidth, imgHeight);
     pdf.save(`拾得物届出書_${itemData.product_name}.pdf`);
   };
+
+  // ★重要：担当者表示の優先順位を定義
+  // 1. アイテム登録時の担当者名(registered_by) 2. 渡されたプロファイル 3. 現在ログイン中のプロファイル
+  const displayManager = itemData.registered_by || profileData?.manager_name || fetchedProfile.managerName || '';
 
   return (
     <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #e5e5e7', borderRadius: '12px', backgroundColor: '#fff' }}>
@@ -151,7 +154,7 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
               <tbody>
                 <tr><td style={{ width: '25%', padding: '3px 0' }}>施設名・法人名:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.facility_name || fetchedProfile.facilityName || ''}</td></tr>
                 <tr><td style={{ padding: '3px 0' }}>所在地:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.address || fetchedProfile.address || ''}</td></tr>
-                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.manager_name || fetchedProfile.managerName || ''}</td></tr>
+                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}>{displayManager}</td></tr>
               </tbody>
             </table>
           </div>
