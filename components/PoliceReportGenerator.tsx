@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { createBrowserClient } from '@supabase/ssr'; // ★追加: Supabaseクライアント
 
 interface PoliceReportProps {
   itemData: {
@@ -14,7 +15,6 @@ interface PoliceReportProps {
     image_url?: string;
     found_at?: string;
   };
-  // ★追加：プロフィールデータを受け取る型定義
   profileData?: {
     facility_name?: string;
     address?: string;
@@ -27,25 +27,75 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
   const [claimRights, setClaimRights] = useState('主張する');
   const reportRef = useRef<HTMLDivElement>(null);
 
+  // ★追加: コンポーネント内で直接取得するプロフィール情報
+  const [fetchedProfile, setFetchedProfile] = useState({
+    facilityName: '',
+    address: '',
+    managerName: ''
+  });
+
   useEffect(() => {
     if (itemData.location) {
       setLocation(itemData.location);
     }
   }, [itemData.location]);
 
+  // ★追加: Supabaseからユーザー情報を自動補完するロジック
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setFetchedProfile({
+            facilityName: user.user_metadata?.facility_name || '',
+            address: user.user_metadata?.facility_address || user.user_metadata?.address || '',
+            managerName: user.user_metadata?.manager_name || ''
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile', error);
+      }
+    };
+    
+    // 親からデータが渡ってきていない場合のみ自己取得する
+    if (!profileData?.facility_name) {
+      fetchProfile();
+    }
+  }, [profileData]);
+
   const handleDownloadPDF = async () => {
     if (!reportRef.current) return;
+    
+    // ★修正: スクロール位置のズレによる見切れを防止
     const canvas = await html2canvas(reportRef.current, { 
       scale: 2, 
       useCORS: true,
       logging: false,
-      windowHeight: 1200 
+      scrollY: -window.scrollY 
     });
+    
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
+    
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    
+    let imgWidth = pdfWidth;
+    let imgHeight = (canvas.height * pdfWidth) / canvas.width;
+    
+    // ★修正: 要素がA4サイズを超えた場合、1ページに収まるよう自動縮小するロジック
+    if (imgHeight > pdfHeight) {
+      imgHeight = pdfHeight;
+      imgWidth = (canvas.width * imgHeight) / canvas.height;
+    }
+    
+    const xOffset = (pdfWidth - imgWidth) / 2;
+    
+    pdf.addImage(imgData, 'PNG', xOffset, 0, imgWidth, imgHeight);
     pdf.save(`拾得物届出書_${itemData.product_name}.pdf`);
   };
 
@@ -87,9 +137,9 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
         警察提出用PDFを生成
       </button>
 
-      {/* PDFレンダリング領域 */}
-      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-        <div ref={reportRef} style={{ width: '210mm', height: '297mm', padding: '20mm', backgroundColor: 'white', color: 'black', fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif', boxSizing: 'border-box', overflow: 'hidden' }}>
+      {/* ★修正: PDFレンダリング領域を見切れ防止のため opacity: 0 と zIndex に変更、overflow: hidden を削除 */}
+      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -100, opacity: 0, pointerEvents: 'none' }}>
+        <div ref={reportRef} style={{ width: '210mm', minHeight: '297mm', padding: '20mm', backgroundColor: 'white', color: 'black', fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif', boxSizing: 'border-box' }}>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
             <div style={{ fontSize: '12pt' }}>宛先： 警察署長 殿</div>
@@ -109,10 +159,10 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
             <p style={{ margin: '0 0 5px 0', fontSize: '10pt', fontWeight: 'bold' }}>【届出者（施設管理者）】</p>
             <table style={{ width: '100%', fontSize: '11pt', borderCollapse: 'collapse' }}>
               <tbody>
-                {/* ★自動入力反映箇所：profileData から各値を参照 */}
-                <tr><td style={{ width: '25%', padding: '3px 0' }}>施設名・法人名:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.facility_name || ''}</td></tr>
-                <tr><td style={{ padding: '3px 0' }}>所在地:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.address || ''}</td></tr>
-                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.manager_name || ''}</td></tr>
+                {/* ★修正: 親からのデータがない場合は自身で取得した fetchedProfile を使う */}
+                <tr><td style={{ width: '25%', padding: '3px 0' }}>施設名・法人名:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.facility_name || fetchedProfile.facilityName || ''}</td></tr>
+                <tr><td style={{ padding: '3px 0' }}>所在地:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.address || fetchedProfile.address || ''}</td></tr>
+                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.manager_name || fetchedProfile.managerName || ''}</td></tr>
               </tbody>
             </table>
           </div>
