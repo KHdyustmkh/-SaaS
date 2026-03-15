@@ -12,11 +12,17 @@ interface PoliceReportProps {
     color: string;
     description: string;
     image_url?: string;
-    found_at?: string; // 拾得日時（親から渡されれば表示、なければ空欄）
+    found_at?: string;
+  };
+  // ★追加：プロフィールデータを受け取る型定義
+  profileData?: {
+    facility_name?: string;
+    address?: string;
+    manager_name?: string;
   };
 }
 
-export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData }) => {
+export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, profileData }) => {
   const [location, setLocation] = useState(itemData.location || '');
   const [claimRights, setClaimRights] = useState('主張する');
   const reportRef = useRef<HTMLDivElement>(null);
@@ -32,7 +38,8 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
     const canvas = await html2canvas(reportRef.current, { 
       scale: 2, 
       useCORS: true,
-      logging: false 
+      logging: false,
+      windowHeight: 1200 
     });
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -46,7 +53,6 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
     <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #e5e5e7', borderRadius: '12px', backgroundColor: '#fff' }}>
       <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '15px' }}>📄 警察提出用書類生成</h3>
       
-      {/* 拾得場所入力 UIは維持 */}
       <div style={{ marginBottom: '15px' }}>
         <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '4px' }}>詳細な拾得場所（任意・PDFに反映）</label>
         <input 
@@ -58,27 +64,17 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
         />
       </div>
 
-      {/* 権利主張 UIは維持 */}
       <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f0f7ff', borderRadius: '8px', border: '1px solid #cce5ff' }}>
         <label style={{ fontSize: '0.75rem', color: '#0056b3', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
           所有権取得の希望（ビジネスモデルの維持に必須）
         </label>
         <div style={{ display: 'flex', gap: '20px' }}>
           <label style={{ fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <input 
-              type="radio" 
-              value="主張する" 
-              checked={claimRights === '主張する'} 
-              onChange={(e) => setClaimRights(e.target.value)} 
-            /> 主張する（推奨）
+            <input type="radio" value="主張する" checked={claimRights === '主張する'} onChange={(e) => setClaimRights(e.target.value)} /> 主張する（推奨）
           </label>
           <label style={{ fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#999' }}>
-            <input 
-              type="radio" 
-              value="放棄する" 
-              checked={claimRights === '放棄する'} 
-              onChange={(e) => {
-                if(window.confirm("【警告】権利を放棄すると、期間満了後にこの物品を資産として買い取ることができなくなります。本当によろしいですか？")) {
+            <input type="radio" value="放棄する" checked={claimRights === '放棄する'} onChange={(e) => {
+                if(window.confirm("【警告】権利を放棄すると、期間満了後にこの物品を資産として買い取ることができなくなります。")) {
                   setClaimRights(e.target.value);
                 }
               }} 
@@ -87,22 +83,16 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
         </div>
       </div>
 
-      <button 
-        onClick={handleDownloadPDF}
-        style={{ width: '100%', padding: '12px', backgroundColor: '#007aff', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-      >
+      <button onClick={handleDownloadPDF} style={{ width: '100%', padding: '12px', backgroundColor: '#007aff', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
         警察提出用PDFを生成
       </button>
 
-      {/* PDFレンダリング用（画面外）: 公的文書フォーマットへ大幅改修 */}
+      {/* PDFレンダリング領域 */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-        <div ref={reportRef} style={{ width: '210mm', minHeight: '297mm', padding: '20mm', backgroundColor: 'white', color: 'black', fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif', boxSizing: 'border-box' }}>
+        <div ref={reportRef} style={{ width: '210mm', height: '297mm', padding: '20mm', backgroundColor: 'white', color: 'black', fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif', boxSizing: 'border-box', overflow: 'hidden' }}>
           
-          {/* ヘッダー部分 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-            <div style={{ fontSize: '12pt' }}>
-              宛先：　　　　　　警察署長 殿
-            </div>
+            <div style={{ fontSize: '12pt' }}>宛先： 警察署長 殿</div>
             <div style={{ textAlign: 'right', fontSize: '10pt' }}>
               提出日: {new Date().toLocaleDateString('ja-JP')}
               <div style={{ border: '1px solid black', padding: '10px', marginTop: '10px', width: '60mm', height: '20mm', textAlign: 'left' }}>
@@ -115,19 +105,18 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
             拾得物提出書 兼 所有権取得申出書
           </h1>
           
-          {/* 提出者情報 */}
           <div style={{ marginBottom: '20px', border: '1px solid black', padding: '10px' }}>
             <p style={{ margin: '0 0 5px 0', fontSize: '10pt', fontWeight: 'bold' }}>【届出者（施設管理者）】</p>
             <table style={{ width: '100%', fontSize: '11pt', borderCollapse: 'collapse' }}>
               <tbody>
-                <tr><td style={{ width: '20%', padding: '3px 0' }}>施設名・法人名:</td><td style={{ borderBottom: '1px dotted black' }}></td></tr>
-                <tr><td style={{ padding: '3px 0' }}>所在地:</td><td style={{ borderBottom: '1px dotted black' }}></td></tr>
-                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}></td></tr>
+                {/* ★自動入力反映箇所：profileData から各値を参照 */}
+                <tr><td style={{ width: '25%', padding: '3px 0' }}>施設名・法人名:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.facility_name || ''}</td></tr>
+                <tr><td style={{ padding: '3px 0' }}>所在地:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.address || ''}</td></tr>
+                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.manager_name || ''}</td></tr>
               </tbody>
             </table>
           </div>
 
-          {/* 物件情報テーブル */}
           <p style={{ margin: '0 0 5px 0', fontSize: '10pt', fontWeight: 'bold' }}>【拾得物件情報】</p>
           <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black', marginBottom: '20px', fontSize: '11pt' }}>
             <tbody>
@@ -156,22 +145,20 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
             </tbody>
           </table>
 
-          {/* 法的根拠・特記事項 */}
           <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid black', fontSize: '9pt', lineHeight: '1.5' }}>
             <p style={{ fontWeight: 'bold', margin: '0 0 5px 0' }}>【特記事項及び誓約事項】</p>
             <ol style={{ margin: 0, paddingLeft: '20px' }}>
               <li>本届出物件について、遺失物法第28条の規定に基づき、保管期間満了時における所有権の取得を上記のとおり申出します。</li>
-              <li>所有権取得後は、関係法令を遵守し、適正な再流通または廃棄処分（資源循環事業者への引き渡し等）を行うことを誓約いたします。</li>
-              <li>本物件に個人情報等が含まれる場合、関係法令に基づき適切に消去・破棄等の処置を講じます。</li>
+              <li>所有権取得後は、関係法令を遵守し、適正な再流通または廃棄処分を行うことを誓約いたします。</li>
+              <li>本物件に個人情報等が含まれる場合、適切に消去・破棄等の処置を講じます。</li>
             </ol>
           </div>
 
-          {/* 画像添付領域 */}
-          <div style={{ border: '1px solid black', padding: '10px', minHeight: '100mm' }}>
+          <div style={{ border: '1px solid black', padding: '10px', height: '100mm' }}>
             <p style={{ margin: '0 0 10px 0', fontSize: '10pt', fontWeight: 'bold' }}>【物件画像（現況記録）】</p>
             {itemData.image_url ? (
               <div style={{ textAlign: 'center' }}>
-                <img src={itemData.image_url} alt="物件画像" style={{ maxWidth: '170mm', maxHeight: '85mm', objectFit: 'contain' }} crossOrigin="anonymous" />
+                <img src={itemData.image_url} alt="物件画像" style={{ maxWidth: '170mm', maxHeight: '80mm', objectFit: 'contain' }} crossOrigin="anonymous" />
               </div>
             ) : (
               <div style={{ textAlign: 'center', color: '#999', paddingTop: '40mm' }}>画像データなし</div>

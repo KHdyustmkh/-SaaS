@@ -10,6 +10,7 @@ export default function ItemDetailPage() {
   const id = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
   
   const [item, setItem] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null); // ★プロフィール情報を保持するステートを追加
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [isEditingPolice, setIsEditingPolice] = useState(false);
@@ -62,18 +63,15 @@ export default function ItemDetailPage() {
     }
   };
 
-  // ★統合・拡張：警察情報の保存と自動ステータス更新
   const handleSavePoliceInfo = async () => {
     if (!id) return;
     setUpdating(true);
     try {
-      // 更新データの作成
       const updates: any = {
         reported_to_police_at: editPoliceDate || null,
         police_receipt_number: editPoliceNumber || null
       };
 
-      // 【ロジック修正】受理番号が入力されている場合、ステータスを自動で「警察届出済」にする
       if (editPoliceNumber && editPoliceNumber.trim() !== "") {
         updates.status = '警察届出済';
       }
@@ -85,7 +83,6 @@ export default function ItemDetailPage() {
 
       if (error) throw error;
 
-      // ローカルステートの更新（画面の即時反映）
       setItem((prev: any) => ({
         ...prev,
         ...updates
@@ -134,13 +131,23 @@ export default function ItemDetailPage() {
     const fetchItem = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
-      const { data, error } = await supabase.from('lost_items').select('*').eq('id', id).single();
-      if (error || !data) {
+
+      // ★アイテム情報とプロフィール情報を並列で取得
+      const [itemRes, profileRes] = await Promise.all([
+        supabase.from('lost_items').select('*').eq('id', id).single(),
+        supabase.from('profiles').select('*').eq('id', user.id).single()
+      ]);
+
+      if (itemRes.error || !itemRes.data) {
         router.push('/');
       } else {
-        setItem(data);
-        setEditPoliceDate(data.reported_to_police_at ? data.reported_to_police_at.split('T')[0] : '');
-        setEditPoliceNumber(data.police_receipt_number || '');
+        setItem(itemRes.data);
+        setEditPoliceDate(itemRes.data.reported_to_police_at ? itemRes.data.reported_to_police_at.split('T')[0] : '');
+        setEditPoliceNumber(itemRes.data.police_receipt_number || '');
+      }
+
+      if (!profileRes.error) {
+        setProfile(profileRes.data);
       }
       setLoading(false);
     };
@@ -239,7 +246,11 @@ export default function ItemDetailPage() {
 
                 {itemDataForPdf && (
                   <div style={{ marginTop: '20px' }}>
-                    <PoliceReportGenerator itemData={itemDataForPdf} />
+                    {/* ★profileData を子コンポーネントに渡すように修正 */}
+                    <PoliceReportGenerator 
+                      itemData={itemDataForPdf} 
+                      profileData={profile} 
+                    />
                   </div>
                 )}
               </section>

@@ -12,6 +12,7 @@ export default function MyPage() {
   const [profile, setProfile] = useState({
     facilityName: '',
     managerName: '',
+    address: '', // ★追加：所在地
     email: ''
   });
 
@@ -31,6 +32,7 @@ export default function MyPage() {
       setProfile({
         facilityName: user.user_metadata?.facility_name || '',
         managerName: user.user_metadata?.manager_name || '',
+        address: user.user_metadata?.address || '', // ★追加：メタデータから所在地を取得
         email: user.email || ''
       });
       setLoading(false);
@@ -44,6 +46,7 @@ export default function MyPage() {
       data: {
         facility_name: profile.facilityName,
         manager_name: profile.managerName,
+        address: profile.address, // ★追加：メタデータに所在地を保存
       }
     });
 
@@ -71,7 +74,7 @@ export default function MyPage() {
     borderRadius: '10px',
     border: '1px solid #d2d2d7',
     fontSize: '1rem',
-    boxSizing: 'border-box', // これが「はみ出し」を防ぐ鍵です
+    boxSizing: 'border-box',
     marginTop: '4px'
   };
 
@@ -98,6 +101,18 @@ export default function MyPage() {
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>施設名</label>
               <input type="text" value={profile.facilityName} onChange={(e) => setProfile({...profile, facilityName: e.target.value})} style={inputStyle} />
+            </div>
+
+            {/* ★追加箇所：所在地（住所） */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>所在地（PDFに反映されます）</label>
+              <input 
+                type="text" 
+                value={profile.address} 
+                placeholder="例: 東京都渋谷区神南1-2-3" 
+                onChange={(e) => setProfile({...profile, address: e.target.value})} 
+                style={inputStyle} 
+              />
             </div>
 
             <div>
