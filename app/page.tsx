@@ -111,24 +111,23 @@ export default function Dashboard() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif', overflowX: 'hidden' }}>
       
-      {/* 1段目：非固定（スクロールで消える） */}
+      {/* 1段目：非固定（ダッシュボード・新規登録ボタンを削除） */}
       <div style={{ 
         backgroundColor: 'white', 
-        padding: '10px 24px', 
+        padding: '12px 24px', 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
         borderBottom: '1px solid #d2d2d7'
       }}>
-        <span style={{ fontWeight: '700', fontSize: '1.0rem', color: '#1d1d1f' }}>拾得物管理ポータル</span>
+        <span style={{ fontWeight: '700', fontSize: '1.1rem', color: '#1d1d1f' }}>拾得物管理ポータル</span>
         <button 
           onClick={() => router.push('/mypage')} 
           style={{ 
-            backgroundColor: '#f5f5f7', 
+            backgroundColor: 'transparent', 
             color: '#007aff', 
-            border: '1px solid #d2d2d7', 
-            padding: '6px 16px', 
-            borderRadius: '8px', 
+            border: 'none', 
+            padding: '4px 8px', 
             fontSize: '0.85rem', 
             fontWeight: '600',
             cursor: 'pointer' 
@@ -138,20 +137,19 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* 2段目：【固定設定】背景白、施設名・通知・新規登録ボタン */}
+      {/* 2段目：【固定】背景を白に変更 */}
       <header style={{ 
         backgroundColor: 'white', 
         borderBottom: '1px solid #d2d2d7', 
         position: 'sticky', 
         top: 0, 
-        padding: isMobile ? '10px 12px' : '12px 24px', 
+        padding: isMobile ? '10px 12px' : '14px 24px', 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
         boxShadow: '0 2px 4px rgba(0,0,0,0.02)', 
         zIndex: 100 
       }}>
-        {/* 左側：ロゴと施設情報 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ cursor: 'pointer', width: '38px', height: '38px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e5e5e7' }} onClick={() => router.push('/')}>
             {userInfo.logoUrl ? (
@@ -166,7 +164,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 右側：通知と新規登録ボタン */}
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px' }}>
           <div style={{ position: 'relative' }}>
             <button onClick={() => setShowNotificationModal(!showNotificationModal)} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '10px', borderRadius: '12px', cursor: 'pointer' }}>
@@ -207,7 +204,7 @@ export default function Dashboard() {
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px' }}>
-        {/* 以下、コンテンツ部分は変更なし */}
+        {/* コンテンツエリアは変更なし */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
           <StatCard title="🚨 届出未完了" count={items.filter(i => (i.status === '届出未完了' || !i.status) && !i.reported_to_police_at).length} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?status=届出未完了')} />
           <StatCard title="🚔 警察届出済" count={items.filter(i => i.status === '警察届出済').length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=警察届出済')} />
@@ -242,6 +239,15 @@ export default function Dashboard() {
   );
 }
 
+function StatCard({ title, count, color, onClick, isMobile }: { title: string, count: number, color: string, onClick: () => void, isMobile: boolean }) {
+  return (
+    <div onClick={onClick} style={{ backgroundColor: 'white', padding: isMobile ? '12px' : '20px', borderRadius: isMobile ? '12px' : '20px', border: '1px solid #d2d2d7', cursor: 'pointer' }}>
+      <div style={{ color: '#86868b', fontSize: isMobile ? '0.7rem' : '0.8rem', fontWeight: '600' }}>{title}</div>
+      <div style={{ fontSize: isMobile ? '1.4rem' : '2rem', fontWeight: '800', color: color, marginTop: '8px' }}>{count}</div>
+    </div>
+  );
+}
+
 function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { title: string, items: LostItem[], onSeeAll: () => void, getDeadlineInfo: (item: LostItem) => any, isMobile: boolean }) {
   const router = useRouter();
   if (items.length === 0) return null;
@@ -272,15 +278,6 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { 
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ title, count, color, onClick, isMobile }: { title: string, count: number, color: string, onClick: () => void, isMobile: boolean }) {
-  return (
-    <div onClick={onClick} style={{ backgroundColor: 'white', padding: isMobile ? '12px' : '20px', borderRadius: isMobile ? '12px' : '20px', border: '1px solid #d2d2d7', cursor: 'pointer' }}>
-      <div style={{ color: '#86868b', fontSize: isMobile ? '0.7rem' : '0.8rem', fontWeight: '600' }}>{title}</div>
-      <div style={{ fontSize: isMobile ? '1.4rem' : '2rem', fontWeight: '800', color: color, marginTop: '8px' }}>{count}</div>
     </div>
   );
 }
