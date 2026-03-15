@@ -109,20 +109,22 @@ export default function Dashboard() {
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
 
   return (
-    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif', overflowX: 'hidden' }}>
+    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
       
-      {/* 2段目（メインヘッダー）：スクロール時に最上部に固定 */}
+      {/* 修正箇所: topを '56px' に設定し、layout.tsxの1段目と重ならないように固定 */}
       <header style={{ 
-        backgroundColor: 'white', 
+        backgroundColor: '#ffffff', 
         borderBottom: '1px solid #d2d2d7', 
         position: 'sticky', 
-        top: 0, 
+        top: '56px', 
+        left: 0,
+        right: 0,
         padding: isMobile ? '10px 12px' : '14px 24px', 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        boxShadow: '0 2px 4px rgba(0,0,0,0.02)', 
-        zIndex: 100 
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)', 
+        zIndex: 999 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ cursor: 'pointer', width: '38px', height: '38px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e5e5e7' }} onClick={() => router.push('/')}>
@@ -145,7 +147,7 @@ export default function Dashboard() {
               {urgentNotifications.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', backgroundColor: '#ff3b30', color: 'white', borderRadius: '50%', padding: '2px 5px', fontSize: '0.65rem', fontWeight: 'bold' }}>{urgentNotifications.length}</span>}
             </button>
             {showNotificationModal && (
-              <div style={{ position: 'absolute', top: '50px', right: 0, width: isMobile ? '260px' : '300px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', border: '1px solid #d2d2d7', padding: '16px', zIndex: 200 }}>
+              <div style={{ position: 'absolute', top: '50px', right: 0, width: isMobile ? '260px' : '300px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', border: '1px solid #d2d2d7', padding: '16px', zIndex: 1000 }}>
                 <div style={{ fontWeight: 'bold', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '10px', fontSize: '0.9rem' }}>至急対応が必要</div>
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                   {urgentNotifications.length === 0 ? <div style={{ fontSize: '0.8rem', color: '#86868b', textAlign: 'center', padding: '20px 0' }}>ありません。</div> : urgentNotifications.map(item => (
@@ -163,7 +165,6 @@ export default function Dashboard() {
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px' }}>
-        {/* 統計カードセクション */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
           <StatCard title="🚨 届出未完了" count={items.filter(i => (i.status === '届出未完了' || !i.status) && !i.reported_to_police_at).length} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?status=届出未完了')} />
           <StatCard title="🚔 警察届出済" count={items.filter(i => i.status === '警察届出済').length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=警察届出済')} />
@@ -173,7 +174,6 @@ export default function Dashboard() {
           <StatCard title="🌐 全ての拾得物" count={items.length} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list')} />
         </div>
 
-        {/* 検索・フィルターセクション */}
         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-end', width: '100%', gap: isMobile ? '16px' : '32px' }}>
             <div style={{ flex: '1', minWidth: 0 }}>
@@ -194,7 +194,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 新着の拾得物セクション */}
         <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list')} getDeadlineInfo={getDeadlineInfo} isMobile={isMobile} />
       </main>
     </div>
