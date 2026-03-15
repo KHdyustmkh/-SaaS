@@ -62,27 +62,43 @@ export default function ItemDetailPage() {
     }
   };
 
+  // ★統合・拡張：警察情報の保存と自動ステータス更新
   const handleSavePoliceInfo = async () => {
     if (!id) return;
     setUpdating(true);
     try {
+      // 更新データの作成
+      const updates: any = {
+        reported_to_police_at: editPoliceDate || null,
+        police_receipt_number: editPoliceNumber || null
+      };
+
+      // 【ロジック追加】受理番号が入力されている場合、ステータスを自動で「警察届出済」にする
+      if (editPoliceNumber && editPoliceNumber.trim() !== "") {
+        updates.status = '警察届出済';
+      }
+
       const { error } = await supabase
         .from('lost_items')
-        .update({
-          reported_to_police_at: editPoliceDate || null,
-          police_receipt_number: editPoliceNumber || null
-        })
+        .update(updates)
         .eq('id', id);
 
       if (error) throw error;
 
+      // ローカルステートの更新（画面の即時反映）
       setItem((prev: any) => ({
         ...prev,
-        reported_to_police_at: editPoliceDate || null,
-        police_receipt_number: editPoliceNumber || null
+        ...updates
       }));
+      
       setIsEditingPolice(false);
-      alert('警察情報を更新しました。');
+      
+      const message = updates.status 
+        ? '警察情報を更新し、ステータスを「警察届出済」に変更しました。' 
+        : '警察情報を更新しました。';
+      
+      alert(message);
+      router.refresh();
     } catch (error: any) {
       alert('保存に失敗しました: ' + error.message);
     } finally {
@@ -101,18 +117,17 @@ export default function ItemDetailPage() {
     return photos;
   }, [item]);
 
-  // ★修正: location を追加して子コンポーネントに渡す
   const itemDataForPdf = useMemo(() => {
-  if (!item) return null;
-  return {
-    product_name: item.name,
-    category_hint: item.category,
-    location: item.location || "", // ★DBから取得した場所を連携
-    color: "", 
-    description: item.description || "",
-    image_url: item.photo_url || ""
-  };
-}, [item]);
+    if (!item) return null;
+    return {
+      product_name: item.name,
+      category_hint: item.category,
+      location: item.location || "",
+      color: item.color || "", 
+      description: item.description || "",
+      image_url: item.photo_url || ""
+    };
+  }, [item]);
 
   useEffect(() => {
     if (!id) return;
@@ -171,6 +186,7 @@ export default function ItemDetailPage() {
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>ステータス</label>
                 <select value={item.status || '保管中'} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '10px 16px', borderRadius: '12px', border: '2px solid #007aff', fontWeight: 'bold', color: '#007aff', backgroundColor: '#fff' }}>
                   <option value="保管中">🔵 保管中</option>
+                  <option value="警察届出済">🚔 警察届出済</option>
                   <option value="引き渡し済">🟢 引き渡し済</option>
                   <option value="回収済">🟡 回収済</option>
                   <option value="廃棄済">🔴 廃棄済</option>

@@ -8,20 +8,19 @@ interface PoliceReportProps {
   itemData: {
     product_name: string;
     category_hint: string;
-    location: string; // 親から渡されるDBの場所
+    location: string;
     color: string;
     description: string;
     image_url?: string;
+    found_at?: string; // 拾得日時（親から渡されれば表示、なければ空欄）
   };
 }
 
 export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData }) => {
-  // ★修正：初期値を itemData.location から取得
   const [location, setLocation] = useState(itemData.location || '');
   const [claimRights, setClaimRights] = useState('主張する');
   const reportRef = useRef<HTMLDivElement>(null);
 
-  // 親データの変更（読み込み完了）を検知して同期
   useEffect(() => {
     if (itemData.location) {
       setLocation(itemData.location);
@@ -45,11 +44,11 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
 
   return (
     <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #e5e5e7', borderRadius: '12px', backgroundColor: '#fff' }}>
-      <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '15px' }}>📄 警察提出用PDF生成</h3>
+      <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '15px' }}>📄 警察提出用書類生成</h3>
       
-      {/* 拾得場所入力 */}
+      {/* 拾得場所入力 UIは維持 */}
       <div style={{ marginBottom: '15px' }}>
-        <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '4px' }}>詳細な拾得場所（任意）</label>
+        <label style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginBottom: '4px' }}>詳細な拾得場所（任意・PDFに反映）</label>
         <input 
           type="text" 
           value={location} 
@@ -59,7 +58,7 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
         />
       </div>
 
-      {/* 権利主張の選択UI（ガードレール機能） */}
+      {/* 権利主張 UIは維持 */}
       <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f0f7ff', borderRadius: '8px', border: '1px solid #cce5ff' }}>
         <label style={{ fontSize: '0.75rem', color: '#0056b3', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
           所有権取得の希望（ビジネスモデルの維持に必須）
@@ -92,43 +91,93 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData })
         onClick={handleDownloadPDF}
         style={{ width: '100%', padding: '12px', backgroundColor: '#007aff', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
       >
-        PDFを生成して保存
+        警察提出用PDFを生成
       </button>
 
-      {/* PDFレンダリング用（画面外） */}
-      <div style={{ position: 'absolute', left: '-9999px' }}>
-        <div ref={reportRef} style={{ width: '210mm', padding: '20mm', backgroundColor: 'white', color: 'black', fontFamily: 'sans-serif' }}>
-          <h1 style={{ textAlign: 'center', fontSize: '22pt', marginBottom: '10px' }}>拾得物届出書（控）</h1>
-          <p style={{ textAlign: 'right', fontSize: '10pt', marginBottom: '20px' }}>発行日: {new Date().toLocaleDateString('ja-JP')}</p>
+      {/* PDFレンダリング用（画面外）: 公的文書フォーマットへ大幅改修 */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div ref={reportRef} style={{ width: '210mm', minHeight: '297mm', padding: '20mm', backgroundColor: 'white', color: 'black', fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif', boxSizing: 'border-box' }}>
           
-          <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}>
+          {/* ヘッダー部分 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+            <div style={{ fontSize: '12pt' }}>
+              宛先：　　　　　　警察署長 殿
+            </div>
+            <div style={{ textAlign: 'right', fontSize: '10pt' }}>
+              提出日: {new Date().toLocaleDateString('ja-JP')}
+              <div style={{ border: '1px solid black', padding: '10px', marginTop: '10px', width: '60mm', height: '20mm', textAlign: 'left' }}>
+                <span style={{ fontSize: '8pt', color: '#555' }}>警察署 受理番号記入欄</span>
+              </div>
+            </div>
+          </div>
+
+          <h1 style={{ textAlign: 'center', fontSize: '18pt', letterSpacing: '2px', marginBottom: '30px', borderBottom: '2px solid black', paddingBottom: '5px' }}>
+            拾得物提出書 兼 所有権取得申出書
+          </h1>
+          
+          {/* 提出者情報 */}
+          <div style={{ marginBottom: '20px', border: '1px solid black', padding: '10px' }}>
+            <p style={{ margin: '0 0 5px 0', fontSize: '10pt', fontWeight: 'bold' }}>【届出者（施設管理者）】</p>
+            <table style={{ width: '100%', fontSize: '11pt', borderCollapse: 'collapse' }}>
+              <tbody>
+                <tr><td style={{ width: '20%', padding: '3px 0' }}>施設名・法人名:</td><td style={{ borderBottom: '1px dotted black' }}></td></tr>
+                <tr><td style={{ padding: '3px 0' }}>所在地:</td><td style={{ borderBottom: '1px dotted black' }}></td></tr>
+                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* 物件情報テーブル */}
+          <p style={{ margin: '0 0 5px 0', fontSize: '10pt', fontWeight: 'bold' }}>【拾得物件情報】</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black', marginBottom: '20px', fontSize: '11pt' }}>
             <tbody>
-              <tr><td style={{ width: '30%', border: '1px solid black', padding: '12px', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>物件名</td><td style={{ border: '1px solid black', padding: '12px' }}>{itemData.product_name}</td></tr>
-              <tr><td style={{ border: '1px solid black', padding: '12px', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>カテゴリー</td><td style={{ border: '1px solid black', padding: '12px' }}>{itemData.category_hint}</td></tr>
-              <tr><td style={{ border: '1px solid black', padding: '12px', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>拾得場所</td><td style={{ border: '1px solid black', padding: '12px' }}>{location || '施設内'}</td></tr>
-              <tr><td style={{ border: '1px solid black', padding: '12px', backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>特徴・状態</td><td style={{ border: '1px solid black', padding: '12px' }}>{itemData.description}</td></tr>
               <tr>
-                <td style={{ border: '1px solid black', padding: '12px', backgroundColor: '#e6f7ff', fontWeight: 'bold' }}>所有権取得の希望</td>
-                <td style={{ border: '1px solid black', padding: '12px', fontWeight: 'bold' }}>{claimRights}</td>
+                <td style={{ width: '25%', border: '1px solid black', padding: '10px', backgroundColor: '#f5f5f5', textAlign: 'center' }}>物件名（類目）</td>
+                <td style={{ border: '1px solid black', padding: '10px', fontWeight: 'bold' }}>{itemData.product_name} ({itemData.category_hint})</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid black', padding: '10px', backgroundColor: '#f5f5f5', textAlign: 'center' }}>拾得日時</td>
+                <td style={{ border: '1px solid black', padding: '10px' }}>{itemData.found_at || '　　　年　　月　　日　　時　　分頃'}</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid black', padding: '10px', backgroundColor: '#f5f5f5', textAlign: 'center' }}>拾得場所</td>
+                <td style={{ border: '1px solid black', padding: '10px' }}>{location || '施設内（詳細不明）'}</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid black', padding: '10px', backgroundColor: '#f5f5f5', textAlign: 'center' }}>物件の特徴・色</td>
+                <td style={{ border: '1px solid black', padding: '10px' }}>色: {itemData.color} / 状態・特徴: {itemData.description}</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid black', padding: '10px', backgroundColor: '#f5f5f5', textAlign: 'center' }}>所有権取得の意思</td>
+                <td style={{ border: '1px solid black', padding: '10px', fontSize: '14pt', fontWeight: 'bold', textAlign: 'center' }}>
+                  {claimRights === '主張する' ? '☑ 主張する　　□ 放棄する' : '□ 主張する　　☑ 放棄する'}
+                </td>
               </tr>
             </tbody>
           </table>
 
-          <div style={{ marginTop: '30px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px', fontSize: '10pt', lineHeight: '1.6' }}>
-            <p style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '8px' }}>所有権取得に関する特記事項</p>
-            <p style={{ margin: 0 }}>
-              本届出物件について、遺失物法第28条に基づき、保管期間満了時における所有権の取得を主張いたします。
-              所有権取得後は、提携する資源循環事業者（古物商許可保有）を通じて、適正な再流通または再資源化を執り行います。
-              これは、施設内における放置物件の有効活用と廃棄物削減を目的とした適正管理プロセスの一環です。
-            </p>
+          {/* 法的根拠・特記事項 */}
+          <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid black', fontSize: '9pt', lineHeight: '1.5' }}>
+            <p style={{ fontWeight: 'bold', margin: '0 0 5px 0' }}>【特記事項及び誓約事項】</p>
+            <ol style={{ margin: 0, paddingLeft: '20px' }}>
+              <li>本届出物件について、遺失物法第28条の規定に基づき、保管期間満了時における所有権の取得を上記のとおり申出します。</li>
+              <li>所有権取得後は、関係法令を遵守し、適正な再流通または廃棄処分（資源循環事業者への引き渡し等）を行うことを誓約いたします。</li>
+              <li>本物件に個人情報等が含まれる場合、関係法令に基づき適切に消去・破棄等の処置を講じます。</li>
+            </ol>
           </div>
 
-          {itemData.image_url && (
-            <div style={{ marginTop: '30px', textAlign: 'center' }}>
-              <p style={{ textAlign: 'left', fontWeight: 'bold' }}>【参考写真】</p>
-              <img src={itemData.image_url} alt="" style={{ maxWidth: '160mm', maxHeight: '100mm', border: '1px solid #eee' }} />
-            </div>
-          )}
+          {/* 画像添付領域 */}
+          <div style={{ border: '1px solid black', padding: '10px', minHeight: '100mm' }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '10pt', fontWeight: 'bold' }}>【物件画像（現況記録）】</p>
+            {itemData.image_url ? (
+              <div style={{ textAlign: 'center' }}>
+                <img src={itemData.image_url} alt="物件画像" style={{ maxWidth: '170mm', maxHeight: '85mm', objectFit: 'contain' }} crossOrigin="anonymous" />
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', color: '#999', paddingTop: '40mm' }}>画像データなし</div>
+            )}
+          </div>
+          
         </div>
       </div>
     </div>
