@@ -172,7 +172,7 @@ export default function Dashboard() {
           <StatCard title="🤝 お客様返却済" count={items.filter(i => i.status === 'お客様返却済').length} color="#34c759" isMobile={isMobile} onClick={() => router.push('/items/list?status=お客様返却済')} />
           <StatCard title="📦 回収済" count={items.filter(i => i.status === '回収済').length} color="#8e8e93" isMobile={isMobile} onClick={() => router.push('/items/list?status=回収済')} />
           <StatCard title="🗑️ 廃棄済" count={items.filter(i => i.status === '廃棄済').length} color="#ff3b30" isMobile={isMobile} onClick={() => router.push('/items/list?status=廃棄済')} />
-          <StatCard title="🌐 全ての拾得物" count={items.length} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list')} />
+          <StatCard title="🌐 全ての拾得物" count={items.length} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list?status=all')} />
         </div>
 
         {/* 検索・フィルターセクション */}

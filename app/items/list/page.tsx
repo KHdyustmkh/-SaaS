@@ -21,6 +21,7 @@ function ListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
+  // デフォルト値を 'all' ではなく、明示的に受け取った値にする
   const statusFilter = searchParams.get('status') || '届出未完了';
   const isUnsubmittedOnly = searchParams.get('unsubmitted') === 'true';
 
@@ -28,14 +29,13 @@ function ListContent() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('deadline'); 
-  const [isMobile, setIsMobile] = useState(false); // ★モバイル判定を追加
+  const [isMobile, setIsMobile] = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // ★モバイル判定のuseEffect
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     handleResize();
@@ -79,9 +79,10 @@ function ListContent() {
       const definedStatuses = ['お客様返却済', '回収済', '廃棄済', '警察届出済'];
       const currentItemStatus = (!item.status || item.status === '届出未完了' || !definedStatuses.includes(item.status)) ? '届出未完了' : item.status;
 
+      // フィルタリングロジックの修正
       if (isUnsubmittedOnly) {
         if (currentItemStatus !== '届出未完了' || item.reported_to_police_at) return false;
-      } else {
+      } else if (statusFilter !== 'all') { // パラメータが 'all' でない時だけステータスで絞り込む
         if (currentItemStatus !== statusFilter) return false;
       }
 
@@ -113,17 +114,16 @@ function ListContent() {
             ＜ 戻る
           </button>
           <h1 style={{ fontSize: isMobile ? '1.0rem' : '1.1rem', fontWeight: '700', margin: 0, flex: 1 }}>
-            {isUnsubmittedOnly ? '届出未完了' : statusFilter}
+            {/* タイトルの表示切り替え */}
+            {isUnsubmittedOnly ? '届出未完了' : (statusFilter === 'all' ? '全ての拾得物' : statusFilter)}
           </h1>
           <span style={{ backgroundColor: '#86868b', color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{sortedAndFilteredList.length} 件</span>
         </div>
       </header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px', boxSizing: 'border-box' }}>
-        {/* ★検索バーの修正箇所 */}
         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '20px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: '24px', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '16px' }}>
-            {/* 検索入力 */}
             <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
               <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868b' }}>🔍</span>
               <input 
@@ -139,12 +139,11 @@ function ListContent() {
                   fontSize: '16px', 
                   backgroundColor: '#f5f5f7', 
                   outline: 'none',
-                  boxSizing: 'border-box', // ★必須
+                  boxSizing: 'border-box',
                   appearance: 'none'
                 }} 
               />
             </div>
-            {/* 並び替えセレクト */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
               <span style={{ fontSize: '0.8rem', color: '#86868b', whiteSpace: 'nowrap' }}>並び替え:</span>
               <select 
