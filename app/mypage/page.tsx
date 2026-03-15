@@ -12,10 +12,13 @@ export default function MyPage() {
   const [profile, setProfile] = useState({
     facilityName: '',
     managerName: '',
-    address: '', // ★追加：所在地
+    managerList: [] as string[], // 担当者名簿
+    address: '',
     email: '',
-    logoUrl: '' // ★追加：ロゴURL
+    logoUrl: '' 
   });
+
+  const [newManagerName, setNewManagerName] = useState('');
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,19 +33,23 @@ export default function MyPage() {
         return;
       }
 
+      const savedManager = user.user_metadata?.manager_name || '';
+      const savedList = user.user_metadata?.manager_list || [];
+      const initialList = savedList.length > 0 ? savedList : (savedManager ? [savedManager] : []);
+
       setProfile({
         facilityName: user.user_metadata?.facility_name || '',
-        managerName: user.user_metadata?.manager_name || '',
-        address: user.user_metadata?.address || '', // ★追加：メタデータから所在地を取得
+        managerName: savedManager,
+        managerList: initialList,
+        address: user.user_metadata?.address || '', 
         email: user.email || '',
-        logoUrl: user.user_metadata?.logo_url || '' // ★追加
+        logoUrl: user.user_metadata?.logo_url || '' 
       });
       setLoading(false);
     }
     getProfile();
   }, [supabase, router]);
 
-  // ★追加：画像アップロード処理
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -52,7 +59,6 @@ export default function MyPage() {
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `logos/${fileName}`;
 
-    // 1. Storageにアップロード
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(filePath, file);
@@ -63,12 +69,10 @@ export default function MyPage() {
       return;
     }
 
-    // 2. 公開URLを取得
     const { data: { publicUrl } } = supabase.storage
       .from('avatars')
       .getPublicUrl(filePath);
 
-    // 3. 状態を更新（保存ボタンを押した時に確定させる）
     setProfile({ ...profile, logoUrl: publicUrl });
     setSaving(false);
   };
@@ -79,8 +83,9 @@ export default function MyPage() {
       data: {
         facility_name: profile.facilityName,
         manager_name: profile.managerName,
-        address: profile.address, // ★追加：メタデータに所在地を保存
-        logo_url: profile.logoUrl // ★追加：ロゴURLを保存
+        manager_list: profile.managerList,
+        address: profile.address, 
+        logo_url: profile.logoUrl 
       }
     });
 
@@ -101,7 +106,6 @@ export default function MyPage() {
     }
   };
 
-  // 共通の入力欄スタイル（はみ出し防止策を適用）
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '12px',
@@ -128,7 +132,6 @@ export default function MyPage() {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
-            {/* ★追加箇所：施設ロゴ設定 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '10px 0' }}>
               <div style={{ width: '64px', height: '64px', borderRadius: '12px', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid #d2d2d7' }}>
                 {profile.logoUrl ? (
@@ -156,7 +159,6 @@ export default function MyPage() {
               <input type="text" value={profile.facilityName} onChange={(e) => setProfile({...profile, facilityName: e.target.value})} style={inputStyle} />
             </div>
 
-            {/* ★追加箇所：所在地（住所） */}
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>所在地（PDFに反映されます）</label>
               <input 
@@ -168,9 +170,82 @@ export default function MyPage() {
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>担当者名</label>
-              <input type="text" value={profile.managerName} onChange={(e) => setProfile({...profile, managerName: e.target.value})} style={inputStyle} />
+            <div style={{ padding: '15px', backgroundColor: '#fcfcfc', border: '1px solid #e5e5ea', borderRadius: '12px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#1d1d1f', fontWeight: '700', marginBottom: '12px' }}>担当者の管理（切り替え・編集）</label>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '0.7rem', color: '#86868b', fontWeight: '600', marginBottom: '4px' }}>現在の担当者（書類に記載されます）</label>
+                <select 
+                  value={profile.managerName} 
+                  onChange={(e) => setProfile({...profile, managerName: e.target.value})} 
+                  style={{ ...inputStyle, marginTop: 0, backgroundColor: 'white', cursor: 'pointer' }}
+                >
+                  <option value="">選択してください</option>
+                  {profile.managerList.map((name, index) => (
+                    <option key={index} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', fontSize: '0.7rem', color: '#86868b', fontWeight: '600', marginBottom: '4px' }}>名簿に新しい担当者を追加</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    value={newManagerName} 
+                    onChange={(e) => setNewManagerName(e.target.value)} 
+                    placeholder="新しい名前" 
+                    style={{ ...inputStyle, marginTop: 0, flex: 1 }} 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const nameToAdd = newManagerName.trim();
+                      if (nameToAdd && !profile.managerList.includes(nameToAdd)) {
+                        setProfile({
+                          ...profile,
+                          managerList: [...profile.managerList, nameToAdd],
+                          managerName: nameToAdd
+                        });
+                        setNewManagerName('');
+                      }
+                    }}
+                    style={{ backgroundColor: '#007aff', color: 'white', border: 'none', borderRadius: '10px', padding: '0 16px', fontWeight: '600', cursor: 'pointer' }}
+                  >
+                    追加
+                  </button>
+                </div>
+              </div>
+
+              {/* ★追加箇所：登録済み名簿の一覧と削除機能 */}
+              {profile.managerList.length > 0 && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', color: '#86868b', fontWeight: '600', marginBottom: '8px' }}>登録済みの名簿（✕で削除）</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {profile.managerList.map((name, index) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', backgroundColor: '#e5e5ea', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>
+                        <span>{name}</span>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`${name} さんを名簿から削除しますか？`)) {
+                              const newList = profile.managerList.filter(n => n !== name);
+                              setProfile({
+                                ...profile,
+                                managerList: newList,
+                                managerName: profile.managerName === name ? (newList[0] || '') : profile.managerName
+                              });
+                            }
+                          }}
+                          style={{ border: 'none', background: 'none', marginLeft: '6px', color: '#86868b', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold', padding: '0 2px' }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <button 
