@@ -21,8 +21,8 @@ function ListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // URLパラメータの取得
-  const statusFilter = searchParams.get('status') || '保管中';
+  // URLパラメータの取得（デフォルトを「届出未完了」に修正）
+  const statusFilter = searchParams.get('status') || '届出未完了';
   const isUnsubmittedOnly = searchParams.get('unsubmitted') === 'true';
 
   const [items, setItems] = useState<LostItem[]>([]);
@@ -52,7 +52,8 @@ function ListContent() {
   }, [fetchItems]);
 
   const getDeadlineInfo = (item: LostItem) => {
-    if (item.status !== '保管中' || item.reported_to_police_at) return null;
+    // ステータス名を「届出未完了」に修正
+    if (item.status !== '届出未完了' || item.reported_to_police_at) return null;
     const foundDate = new Date(item.found_at);
     const today = new Date();
     const diffTime = today.getTime() - foundDate.getTime();
@@ -68,14 +69,14 @@ function ListContent() {
 
   const sortedAndFilteredList = useMemo(() => {
     let list = items.filter(item => {
-      // ステータスの正規化（未設定は保管中として扱う）
-      const definedStatuses = ['引き渡し済', '回収済', '廃棄済'];
-      const currentItemStatus = (!item.status || item.status === '保管中' || !definedStatuses.includes(item.status)) ? '保管中' : item.status;
+      // ステータスの正規化（新名称に更新：未設定は「届出未完了」として扱う）
+      const definedStatuses = ['お客様返却済', '回収済', '廃棄済', '警察届出済'];
+      const currentItemStatus = (!item.status || item.status === '届出未完了' || !definedStatuses.includes(item.status)) ? '届出未完了' : item.status;
 
-      // 【修正】届出未完了モードかどうかの判定
+      // 届出未完了モードかどうかの判定
       if (isUnsubmittedOnly) {
-        // 「保管中」かつ「届出日が空」のものだけを通す
-        if (currentItemStatus !== '保管中' || item.reported_to_police_at) return false;
+        // 「届出未完了」かつ「届出日が空」のものだけを通す
+        if (currentItemStatus !== '届出未完了' || item.reported_to_police_at) return false;
       } else {
         // 通常のステータスフィルタ
         if (currentItemStatus !== statusFilter) return false;

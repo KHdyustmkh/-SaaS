@@ -28,6 +28,9 @@ export default function NewItemPage() {
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
 
+  // ステータスの初期値を「届出未完了」に設定（システム全体の新ルールに準拠）
+  const [status, setStatus] = useState('届出未完了');
+
   const [mainCategory, setMainCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [itemType, setItemType] = useState('');
@@ -122,7 +125,7 @@ export default function NewItemPage() {
       const { error: dbError } = await supabase.from('lost_items').insert([{
         management_number: managementNumber,
         name: name,
-        status: '保管中',
+        status: status, // 内部ステータス（届出未完了）を使用
         found_at: new Date(foundAt).toISOString(),
         category: combinedCategory,
         location: location,
@@ -177,7 +180,7 @@ export default function NewItemPage() {
             )}
           </div>
 
-          {/* ★追加：AI解析が終わったらPDF生成UIを表示する */}
+          {/* ★AI解析が終わったらPDF生成UIを表示する */}
           {aiRawResult && (
             <PoliceReportGenerator itemData={aiRawResult} />
           )}

@@ -69,8 +69,9 @@ export default function Dashboard() {
         const fetchedItems = data as LostItem[];
         setItems(fetchedItems);
 
+        // 通知対象：届出未完了かつ期限間近（ステータス名を「届出未完了」に修正）
         const urgentItems = fetchedItems.filter((item) => {
-          if (item.status !== '保管中' || item.reported_to_police_at) return false;
+          if (item.status !== '届出未完了' || item.reported_to_police_at) return false;
           return calculateRemainingDays(item.found_at) <= 3;
         });
 
@@ -86,17 +87,20 @@ export default function Dashboard() {
 
   const urgentNotifications = useMemo(() => {
     return items.filter(item => {
-      if (item.status !== '保管中' || item.reported_to_police_at) return false;
+      // ステータス名を「届出未完了」に修正
+      if (item.status !== '届出未完了' || item.reported_to_police_at) return false;
       return calculateRemainingDays(item.found_at) <= 3;
     });
   }, [items]);
 
   const unsubmittedCount = useMemo(() => {
-    return items.filter(i => (i.status === '保管中' || !i.status) && !i.reported_to_police_at).length;
+    // 初期値または「届出未完了」で、かつ警察受理番号がないものをカウント
+    return items.filter(i => (i.status === '届出未完了' || !i.status) && !i.reported_to_police_at).length;
   }, [items]);
 
   const getDeadlineInfo = (item: LostItem) => {
-    if (item.status !== '保管中' || item.reported_to_police_at) return null;
+    // ステータス名を「届出未完了」に修正
+    if (item.status !== '届出未完了' || item.reported_to_police_at) return null;
     const remaining = calculateRemainingDays(item.found_at);
     let label = "";
     let color = "";
@@ -134,11 +138,13 @@ export default function Dashboard() {
     });
   }, [items, searchQuery, deadlineFilter]);
 
+  // ★カテゴリー統計ロジックの更新（新ステータス名に完全準拠）
   const stats = {
-    custodyItems: items.filter(i => !i.status || i.status === '保管中'),
-    returnedItems: items.filter(i => i.status === '引き渡し済'),
+    policeReported: items.filter(i => i.status === '警察届出済'),
+    returnedItems: items.filter(i => i.status === 'お客様返却済'),
     collectedItems: items.filter(i => i.status === '回収済'),
     disposedItems: items.filter(i => i.status === '廃棄済'),
+    allCount: items.length
   };
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
@@ -182,12 +188,14 @@ export default function Dashboard() {
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
-          <StatCard title="🚨 届出未完了" count={unsubmittedCount} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?unsubmitted=true')} />
-          <StatCard title="保管中" count={stats.custodyItems.length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=保管中')} />
-          <StatCard title="引き渡し済" count={stats.returnedItems.length} color="#34c759" isMobile={isMobile} onClick={() => router.push('/items/list?status=引き渡し済')} />
-          <StatCard title="回収済" count={stats.collectedItems.length} color="#8e8e93" isMobile={isMobile} onClick={() => router.push('/items/list?status=回収済')} />
-          <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" isMobile={isMobile} onClick={() => router.push('/items/list?status=廃棄済')} />
+        {/* ★統計カードセクション */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
+          <StatCard title="🚨 届出未完了" count={unsubmittedCount} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?status=届出未完了')} />
+          <StatCard title="🚔 警察届出済" count={stats.policeReported.length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=警察届出済')} />
+          <StatCard title="🤝 お客様返却済" count={stats.returnedItems.length} color="#34c759" isMobile={isMobile} onClick={() => router.push('/items/list?status=お客様返却済')} />
+          <StatCard title="📦 回収済" count={stats.collectedItems.length} color="#8e8e93" isMobile={isMobile} onClick={() => router.push('/items/list?status=回収済')} />
+          <StatCard title="🗑️ 廃棄済" count={stats.disposedItems.length} color="#ff3b30" isMobile={isMobile} onClick={() => router.push('/items/list?status=廃棄済')} />
+          <StatCard title="🌐 全ての拾得物" count={stats.allCount} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list')} />
         </div>
 
         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
@@ -245,7 +253,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list?status=保管中')} getDeadlineInfo={getDeadlineInfo} isMobile={isMobile} />
+        <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list')} getDeadlineInfo={getDeadlineInfo} isMobile={isMobile} />
       </main>
     </div>
   );
@@ -260,7 +268,7 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { 
         <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>{title}</h2>
         <button onClick={onSeeAll} style={{ color: '#007aff', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>すべて見る ＞</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isAppleMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
         {items.map((item) => {
           const deadline = getDeadlineInfo(item);
           return (
@@ -293,3 +301,6 @@ function StatCard({ title, count, color, onClick, isMobile }: { title: string, c
     </div>
   );
 }
+
+// 内部用補助定数（isMobileをそのまま使用するための調整）
+const isAppleMobile = true;

@@ -73,7 +73,7 @@ export default function ItemDetailPage() {
         police_receipt_number: editPoliceNumber || null
       };
 
-      // 【ロジック追加】受理番号が入力されている場合、ステータスを自動で「警察届出済」にする
+      // 【ロジック修正】受理番号が入力されている場合、ステータスを自動で「警察届出済」にする
       if (editPoliceNumber && editPoliceNumber.trim() !== "") {
         updates.status = '警察届出済';
       }
@@ -184,12 +184,12 @@ export default function ItemDetailPage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>ステータス</label>
-                <select value={item.status || '保管中'} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '10px 16px', borderRadius: '12px', border: '2px solid #007aff', fontWeight: 'bold', color: '#007aff', backgroundColor: '#fff' }}>
-                  <option value="保管中">🔵 保管中</option>
+                <select value={item.status || '届出未完了'} onChange={(e) => handleStatusChange(e.target.value)} disabled={updating} style={{ padding: '10px 16px', borderRadius: '12px', border: '2px solid #007aff', fontWeight: 'bold', color: '#007aff', backgroundColor: '#fff' }}>
+                  <option value="届出未完了">🚨 届出未完了</option>
                   <option value="警察届出済">🚔 警察届出済</option>
-                  <option value="引き渡し済">🟢 引き渡し済</option>
-                  <option value="回収済">🟡 回収済</option>
-                  <option value="廃棄済">🔴 廃棄済</option>
+                  <option value="お客様返却済">🤝 お客様返却済</option>
+                  <option value="回収済">📦 回収済</option>
+                  <option value="廃棄済">🗑️ 廃棄済</option>
                 </select>
               </div>
             </div>
