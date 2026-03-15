@@ -3,7 +3,6 @@ import "./globals.css";
 import Link from "next/link";
 import { LayoutDashboard, User } from "lucide-react";
 
-// 拡大縮小を禁止する設定
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -24,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body style={{ margin: 0, backgroundColor: "#f8fafc" }}>
-        {/* 1段目：タイトルとマイページのみの行（非固定） */}
+        {/* 1段目：非固定（スクロールで上に流れる） */}
         <nav style={{
           backgroundColor: "#fff",
           borderBottom: "1px solid #e2e8f0",
@@ -41,7 +40,6 @@ export default function RootLayout({
             justifyContent: "space-between",
             alignItems: "center"
           }}>
-            {/* 左側：ロゴとタイトル */}
             <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
                 <div style={{ backgroundColor: "#2563eb", padding: "6px", borderRadius: "8px" }}>
@@ -53,7 +51,6 @@ export default function RootLayout({
               </div>
             </Link>
 
-            {/* 右側：マイページボタンのみ（ダッシュボード・新規登録は削除しました） */}
             <Link href="/mypage" style={{ textDecoration: "none" }}>
               <button style={{
                 padding: "8px 16px",
@@ -75,7 +72,6 @@ export default function RootLayout({
           </div>
         </nav>
 
-        {/* ページ本体（2段目の施設名行やコンテンツ） */}
         <main>{children}</main>
       </body>
     </html>
