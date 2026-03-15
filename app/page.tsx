@@ -47,7 +47,6 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    // レスポンシブ検知ロジックを維持
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -102,16 +101,16 @@ export default function Dashboard() {
     let label = "";
     let color = "";
     if (remaining <= 0) {
-      label = "⚠️ 至急、警察へ届出！";
+      label = "⚠️ 至急";
       color = "#ff3b30";
     } else if (remaining === 1) {
-      label = "🚨 明日が届出期限です";
+      label = "🚨 明日";
       color = "#ff3b30";
     } else if (remaining === 2) {
-      label = "🔥 届出猶予：残り2日";
+      label = "🔥 残2日";
       color = "#ff9500";
     } else {
-      label = `⏳ 届出未完了（残り${remaining}日）`;
+      label = `⏳ 残${remaining}日`;
       color = "#34c759";
     }
     return { remaining, label, color };
@@ -145,13 +144,13 @@ export default function Dashboard() {
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
 
   return (
-    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif' }}>
+    <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif', overflowX: 'hidden' }}>
       <header style={{ backgroundColor: 'white', padding: isMobile ? '10px 16px' : '10px 20px', borderBottom: '1px solid #d2d2d7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '20px' }}>
           <div style={{ cursor: 'pointer' }} onClick={() => router.push('/')}>
             <div style={{ backgroundColor: '#007aff', color: 'white', padding: '6px', borderRadius: '6px' }}>🔳</div>
           </div>
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0' : '12px', fontSize: isMobile ? '0.75rem' : '0.85rem' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0' : '12px', fontSize: '0.85rem' }}>
             <span style={{ fontWeight: '700', color: '#1d1d1f' }}>{userInfo.facilityName}</span>
             {!isMobile && <span style={{ color: '#d2d2d7' }}>|</span>}
             <span style={{ color: '#1d1d1f' }}>担当: {userInfo.staffName} 様</span>
@@ -191,7 +190,6 @@ export default function Dashboard() {
           <StatCard title="廃棄済" count={stats.disposedItems.length} color="#ff3b30" isMobile={isMobile} onClick={() => router.push('/items/list?status=廃棄済')} />
         </div>
 
-        {/* 検索窓セクション：見た目を維持し、はみ出しのみを修正 */}
         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ 
             display: 'flex', 
@@ -201,7 +199,7 @@ export default function Dashboard() {
             width: '100%',
             gap: isMobile ? '16px' : '32px'
           }}>
-            <div style={{ flex: '1' }}>
+            <div style={{ flex: '1', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#86868b', marginBottom: '8px', fontWeight: '600' }}>クイック検索</label>
               <div style={{ position: 'relative', width: '100%' }}>
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>🔍</span>
@@ -217,7 +215,7 @@ export default function Dashboard() {
                     border: '1px solid #d2d2d7', 
                     fontSize: '16px', 
                     backgroundColor: '#f5f5f7',
-                    boxSizing: 'border-box' // 重要：はみ出し防止
+                    boxSizing: 'border-box'
                   }} 
                 />
               </div>
@@ -236,7 +234,7 @@ export default function Dashboard() {
                   backgroundColor: 'white', 
                   fontSize: '16px', 
                   cursor: 'pointer',
-                  boxSizing: 'border-box' // 重要：はみ出し防止
+                  boxSizing: 'border-box'
                 }}
               >
                 <option>すべての期限</option>
@@ -270,24 +268,14 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { 
               {deadline && <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '4px 10px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '800', zIndex: 1 }}>{deadline.label}</div>}
               <div style={{ width: '100%', height: isMobile ? '120px' : '180px', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                 {item.photo_url ? (
-                  <img 
-                    src={item.photo_url} 
-                    alt="" 
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'contain', 
-                      backgroundColor: '#f5f5f7' 
-                    }} 
-                  />
+                  <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 ) : (
                   <div style={{ fontSize: '2rem' }}>📦</div>
                 )}
               </div>
               <div style={{ padding: '12px' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>{item.name}</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
                 <div style={{ fontSize: '0.7rem', color: '#86868b' }}>#{item.management_number || '---'}</div>
-                {!isMobile && <div style={{ fontSize: '0.7rem', color: '#007aff', marginTop: '4px', fontWeight: '600' }}>担当: {item.registered_by || '未設定'} 様</div>}
               </div>
             </div>
           );
