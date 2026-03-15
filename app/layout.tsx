@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Link from "next/link";
-import { LayoutDashboard, PlusCircle } from "lucide-react";
+import { LayoutDashboard, User } from "lucide-react";
 
-// 拡大縮小を禁止する設定（維持）
+// 拡大縮小を禁止する設定
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "拾得物管理ポータル", // ★ここを修正（タブの名前）
+  title: "拾得物管理ポータル",
   description: "効率的な施設内管理ツール",
 };
 
@@ -24,19 +24,15 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body style={{ margin: 0, backgroundColor: "#f8fafc" }}>
-        {/* 固定ナビゲーションバー */}
+        {/* 1段目：タイトルとマイページのみの行（非固定） */}
         <nav style={{
           backgroundColor: "#fff",
           borderBottom: "1px solid #e2e8f0",
           padding: "0 20px",
-          height: "64px",
+          height: "56px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
         }}>
           <div style={{
             width: "100%",
@@ -45,64 +41,41 @@ export default function RootLayout({
             justifyContent: "space-between",
             alignItems: "center"
           }}>
-            {/* 左側：ロゴ */}
+            {/* 左側：ロゴとタイトル */}
             <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
                 <div style={{ backgroundColor: "#2563eb", padding: "6px", borderRadius: "8px" }}>
-                  <LayoutDashboard size={20} color="#fff" />
+                  <LayoutDashboard size={18} color="#fff" />
                 </div>
-                {/* ★ここを修正（画面上の表示名） */}
                 <span style={{ fontWeight: "900", fontSize: "16px", color: "#0f172a", letterSpacing: "-0.5px" }}>
                   拾得物管理ポータル
                 </span>
               </div>
             </Link>
 
-            {/* 右側：アクションボタン（維持） */}
-            <div style={{ display: "flex", gap: "12px" }}>
-              <Link href="/" style={{ textDecoration: "none" }}>
-                <button style={{
-                  padding: "10px 16px",
-                  backgroundColor: "#fff",
-                  color: "#475569",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  transition: "all 0.2s"
-                }}>
-                  ダッシュボード
-                </button>
-              </Link>
-              
-              <Link href="/items/new" style={{ textDecoration: "none" }}>
-                <button style={{
-                  padding: "10px 18px",
-                  backgroundColor: "#2563eb",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)",
-                  transition: "all 0.2s"
-                }}>
-                  <PlusCircle size={18} />
-                  新規登録
-                </button>
-              </Link>
-            </div>
+            {/* 右側：マイページボタンのみ（ダッシュボード・新規登録は削除しました） */}
+            <Link href="/mypage" style={{ textDecoration: "none" }}>
+              <button style={{
+                padding: "8px 16px",
+                backgroundColor: "#fff",
+                color: "#2563eb",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}>
+                <User size={16} />
+                マイページ
+              </button>
+            </Link>
           </div>
         </nav>
 
+        {/* ページ本体（2段目の施設名行やコンテンツ） */}
         <main>{children}</main>
       </body>
     </html>
