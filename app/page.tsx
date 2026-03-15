@@ -124,10 +124,11 @@ export default function Dashboard() {
         <button 
           onClick={() => router.push('/mypage')} 
           style={{ 
-            backgroundColor: 'transparent', 
+            backgroundColor: '#f5f5f7', 
             color: '#007aff', 
-            border: 'none', 
-            padding: '4px 8px', 
+            border: '1px solid #d2d2d7', 
+            padding: '6px 16px', 
+            borderRadius: '8px', 
             fontSize: '0.85rem', 
             fontWeight: '600',
             cursor: 'pointer' 
@@ -137,7 +138,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* 2段目：【固定】背景を白に変更 */}
+      {/* 2段目：【固定】背景白、施設名・通知・新規登録ボタン */}
       <header style={{ 
         backgroundColor: 'white', 
         borderBottom: '1px solid #d2d2d7', 
@@ -204,7 +205,7 @@ export default function Dashboard() {
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px' }}>
-        {/* コンテンツエリアは変更なし */}
+        {/* 統計カードセクション */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
           <StatCard title="🚨 届出未完了" count={items.filter(i => (i.status === '届出未完了' || !i.status) && !i.reported_to_police_at).length} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?status=届出未完了')} />
           <StatCard title="🚔 警察届出済" count={items.filter(i => i.status === '警察届出済').length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=警察届出済')} />
@@ -214,6 +215,7 @@ export default function Dashboard() {
           <StatCard title="🌐 全ての拾得物" count={items.length} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list')} />
         </div>
 
+        {/* 【復元】検索とフィルターセクション */}
         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-end', width: '100%', gap: isMobile ? '16px' : '32px' }}>
             <div style={{ flex: '1', minWidth: 0 }}>
@@ -233,21 +235,15 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* 【復元】新着アイテムセクション */}
         <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list')} getDeadlineInfo={getDeadlineInfo} isMobile={isMobile} />
       </main>
     </div>
   );
 }
 
-function StatCard({ title, count, color, onClick, isMobile }: { title: string, count: number, color: string, onClick: () => void, isMobile: boolean }) {
-  return (
-    <div onClick={onClick} style={{ backgroundColor: 'white', padding: isMobile ? '12px' : '20px', borderRadius: isMobile ? '12px' : '20px', border: '1px solid #d2d2d7', cursor: 'pointer' }}>
-      <div style={{ color: '#86868b', fontSize: isMobile ? '0.7rem' : '0.8rem', fontWeight: '600' }}>{title}</div>
-      <div style={{ fontSize: isMobile ? '1.4rem' : '2rem', fontWeight: '800', color: color, marginTop: '8px' }}>{count}</div>
-    </div>
-  );
-}
-
+// 【復元】必須コンポーネント
 function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { title: string, items: LostItem[], onSeeAll: () => void, getDeadlineInfo: (item: LostItem) => any, isMobile: boolean }) {
   const router = useRouter();
   if (items.length === 0) return null;
@@ -278,6 +274,15 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { 
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function StatCard({ title, count, color, onClick, isMobile }: { title: string, count: number, color: string, onClick: () => void, isMobile: boolean }) {
+  return (
+    <div onClick={onClick} style={{ backgroundColor: 'white', padding: isMobile ? '12px' : '20px', borderRadius: isMobile ? '12px' : '20px', border: '1px solid #d2d2d7', cursor: 'pointer' }}>
+      <div style={{ color: '#86868b', fontSize: isMobile ? '0.7rem' : '0.8rem', fontWeight: '600' }}>{title}</div>
+      <div style={{ fontSize: isMobile ? '1.4rem' : '2rem', fontWeight: '800', color: color, marginTop: '8px' }}>{count}</div>
     </div>
   );
 }
