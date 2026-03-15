@@ -111,34 +111,7 @@ export default function Dashboard() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif', overflowX: 'hidden' }}>
       
-      {/* 1段目：非固定（ダッシュボード・新規登録ボタンを削除） */}
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '12px 24px', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        borderBottom: '1px solid #d2d2d7'
-      }}>
-        <span style={{ fontWeight: '700', fontSize: '1.1rem', color: '#1d1d1f' }}>拾得物管理ポータル</span>
-        <button 
-          onClick={() => router.push('/mypage')} 
-          style={{ 
-            backgroundColor: '#f5f5f7', 
-            color: '#007aff', 
-            border: '1px solid #d2d2d7', 
-            padding: '6px 16px', 
-            borderRadius: '8px', 
-            fontSize: '0.85rem', 
-            fontWeight: '600',
-            cursor: 'pointer' 
-          }}
-        >
-          👤 マイページ
-        </button>
-      </div>
-
-      {/* 2段目：【固定】背景白、施設名・通知・新規登録ボタン */}
+      {/* メインヘッダー（施設名・通知・新規登録）：この行が画面最上部に固定されます */}
       <header style={{ 
         backgroundColor: 'white', 
         borderBottom: '1px solid #d2d2d7', 
@@ -185,27 +158,12 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          
-          <button 
-            onClick={() => router.push('/items/new')} 
-            style={{ 
-              backgroundColor: '#007aff', 
-              color: 'white', 
-              border: 'none', 
-              padding: '8px 16px', 
-              borderRadius: '10px', 
-              fontWeight: '600', 
-              cursor: 'pointer', 
-              fontSize: '0.85rem'
-            }}
-          >
-            + 新規登録
-          </button>
+          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem' }}>+ 新規登録</button>
         </div>
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px' }}>
-        {/* 統計カードセクション */}
+        {/* 統計カードセクション（維持） */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
           <StatCard title="🚨 届出未完了" count={items.filter(i => (i.status === '届出未完了' || !i.status) && !i.reported_to_police_at).length} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?status=届出未完了')} />
           <StatCard title="🚔 警察届出済" count={items.filter(i => i.status === '警察届出済').length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=警察届出済')} />
@@ -215,7 +173,7 @@ export default function Dashboard() {
           <StatCard title="🌐 全ての拾得物" count={items.length} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list')} />
         </div>
 
-        {/* 【復元】検索とフィルターセクション */}
+        {/* 検索・フィルターセクション（維持） */}
         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-end', width: '100%', gap: isMobile ? '16px' : '32px' }}>
             <div style={{ flex: '1', minWidth: 0 }}>
@@ -236,14 +194,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 【復元】新着アイテムセクション */}
+        {/* アイテムリストセクション（維持） */}
         <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list')} getDeadlineInfo={getDeadlineInfo} isMobile={isMobile} />
       </main>
     </div>
   );
 }
 
-// 【復元】必須コンポーネント
 function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { title: string, items: LostItem[], onSeeAll: () => void, getDeadlineInfo: (item: LostItem) => any, isMobile: boolean }) {
   const router = useRouter();
   if (items.length === 0) return null;
@@ -260,11 +217,7 @@ function StatusSection({ title, items, onSeeAll, getDeadlineInfo, isMobile }: { 
             <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', border: '1px solid #d2d2d7', cursor: 'pointer', position: 'relative' }}>
               {deadline && <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: deadline.color, color: 'white', padding: '4px 10px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '800', zIndex: 1 }}>{deadline.label}</div>}
               <div style={{ width: '100%', height: isMobile ? '120px' : '180px', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                {item.photo_url ? (
-                  <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                ) : (
-                  <div style={{ fontSize: '2rem' }}>📦</div>
-                )}
+                {item.photo_url ? <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <div style={{ fontSize: '2rem' }}>📦</div>}
               </div>
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
