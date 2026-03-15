@@ -13,7 +13,8 @@ export default function MyPage() {
     facilityName: '',
     managerName: '',
     address: '', // ★追加：所在地
-    email: ''
+    email: '',
+    logoUrl: '' // ★追加：ロゴURL
   });
 
   const supabase = createBrowserClient(
@@ -33,12 +34,44 @@ export default function MyPage() {
         facilityName: user.user_metadata?.facility_name || '',
         managerName: user.user_metadata?.manager_name || '',
         address: user.user_metadata?.address || '', // ★追加：メタデータから所在地を取得
-        email: user.email || ''
+        email: user.email || '',
+        logoUrl: user.user_metadata?.logo_url || '' // ★追加
       });
       setLoading(false);
     }
     getProfile();
   }, [supabase, router]);
+
+  // ★追加：画像アップロード処理
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSaving(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `logos/${fileName}`;
+
+    // 1. Storageにアップロード
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      alert('画像のアップロードに失敗しました');
+      setSaving(false);
+      return;
+    }
+
+    // 2. 公開URLを取得
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    // 3. 状態を更新（保存ボタンを押した時に確定させる）
+    setProfile({ ...profile, logoUrl: publicUrl });
+    setSaving(false);
+  };
 
   const handleUpdate = async () => {
     setSaving(true);
@@ -47,6 +80,7 @@ export default function MyPage() {
         facility_name: profile.facilityName,
         manager_name: profile.managerName,
         address: profile.address, // ★追加：メタデータに所在地を保存
+        logo_url: profile.logoUrl // ★追加：ロゴURLを保存
       }
     });
 
@@ -93,6 +127,25 @@ export default function MyPage() {
           <h2 style={{ fontSize: '1.0rem', fontWeight: '700', marginBottom: '18px', borderBottom: '1px solid #f5f5f7', paddingBottom: '10px' }}>プロフィール設定</h2>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* ★追加箇所：施設ロゴ設定 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '10px 0' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '12px', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid #d2d2d7' }}>
+                {profile.logoUrl ? (
+                  <img src={profile.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: '1.5rem' }}>🔳</span>
+                )}
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#007aff', fontWeight: '600', cursor: 'pointer' }}>
+                  画像をアップロード
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
+                </label>
+                <p style={{ fontSize: '0.65rem', color: '#86868b', margin: '4px 0 0 0' }}>正方形の画像が推奨されます</p>
+              </div>
+            </div>
+
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', color: '#86868b', fontWeight: '600' }}>メールアドレス（変更不可）</label>
               <input type="text" value={profile.email} disabled style={{ ...inputStyle, backgroundColor: '#f5f5f7', color: '#86868b' }} />
