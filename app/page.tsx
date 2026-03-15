@@ -29,7 +29,7 @@ export default function Dashboard() {
     email: string | null;
     facilityName: string;
     staffName: string;
-    logoUrl: string | null; // ★追加
+    logoUrl: string | null;
   }>({ email: null, facilityName: '読み込み中...', staffName: '読み込み中...', logoUrl: null });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,7 +59,7 @@ export default function Dashboard() {
           email: user.email ?? null,
           facilityName: user.user_metadata?.facility_name || '未設定の施設',
           staffName: user.user_metadata?.manager_name || '未設定',
-          logoUrl: user.user_metadata?.logo_url || null // ★追加
+          logoUrl: user.user_metadata?.logo_url || null 
         });
       }
       const { data, error } = await supabase
@@ -102,9 +102,9 @@ export default function Dashboard() {
     const remaining = calculateRemainingDays(item.found_at);
     let label = "";
     let color = "";
-    if (remaining <= 0) { label = "⚠️ 至急"; color = "#ff3b30"; } 
-    else if (remaining === 1) { label = "🚨 明日"; color = "#ff3b30"; } 
-    else if (remaining === 2) { label = "🔥 残2日"; color = "#ff9500"; } 
+    if (remaining <= 0) { label = "⚠️ 至急"; color = "#ff3b30"; }
+    else if (remaining === 1) { label = "🚨 明日"; color = "#ff3b30"; }
+    else if (remaining === 2) { label = "🔥 残2日"; color = "#ff9500"; }
     else { label = `⏳ 残${remaining}日`; color = "#34c759"; }
     return { remaining, label, color };
   };
@@ -114,89 +114,86 @@ export default function Dashboard() {
       const matchesQuery = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || (item.management_number?.toLowerCase().includes(searchQuery.toLowerCase()));
       const deadline = getDeadlineInfo(item);
       let matchesDeadline = true;
-      if (deadlineFilter === 'あと7日以内') { matchesDeadline = !!(deadline && deadline.remaining <= 7 && deadline.remaining > 0); } 
+      if (deadlineFilter === 'あと7日以内') { matchesDeadline = !!(deadline && deadline.remaining <= 7 && deadline.remaining > 0); }
       else if (deadlineFilter === '期限切れ') { matchesDeadline = !!(deadline && deadline.remaining <= 0); }
       return matchesQuery && matchesDeadline;
     });
   }, [items, searchQuery, deadlineFilter]);
 
-  const stats = {
-    policeReported: items.filter(i => i.status === '警察届出済'),
-    returnedItems: items.filter(i => i.status === 'お客様返却済'),
-    collectedItems: items.filter(i => i.status === '回収済'),
-    disposedItems: items.filter(i => i.status === '廃棄済'),
-    allCount: items.length
-  };
-
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>;
 
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif', overflowX: 'hidden' }}>
-      <header style={{ backgroundColor: 'white', borderBottom: '1px solid #d2d2d7', zIndex: 100 }}>
-        {/* 1行目：ポータル名 ＆ マイページボタン */}
-        <div style={{ padding: '8px 16px', borderBottom: '1px solid #f5f5f7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
-          <span style={{ fontSize: '0.7rem', color: '#86868b', fontWeight: '600' }}>拾得物管理ポータル</span>
-          {/* 元のマイページボタンのスタイルを完全復元 */}
-          <button onClick={() => router.push('/mypage')} style={{ backgroundColor: '#f5f5f7', border: '1px solid #d2d2d7', padding: isMobile ? '8px 10px' : '8px 16px', borderRadius: '10px', fontSize: isMobile ? '1rem' : '0.9rem', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            👤{isMobile ? '' : ' マイページ'}
-          </button>
+      
+      {/* 最上段ヘッダー：指示通り存続。不要なボタンを消し、マイページボタンのみ追加 */}
+      <div style={{ backgroundColor: '#1d1d1f', color: 'white', padding: '10px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight: '700', fontSize: '0.9rem' }}>拾得物管理ポータル</span>
+        <button 
+          onClick={() => router.push('/mypage')} 
+          style={{ backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '4px 12px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer' }}
+        >
+          👤 マイページ
+        </button>
+      </div>
+
+      {/* 2段目ヘッダー：ロゴと担当者情報（マイページボタンを削除） */}
+      <header style={{ 
+        backgroundColor: 'white', 
+        borderBottom: '1px solid #d2d2d7', 
+        position: 'sticky', 
+        top: 0, 
+        padding: isMobile ? '10px 12px' : '12px 20px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        boxShadow: '0 2px 4px rgba(0,0,0,0.02)', 
+        zIndex: 100 
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ cursor: 'pointer', width: '36px', height: '36px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e5e5e7' }} onClick={() => router.push('/')}>
+            {userInfo.logoUrl ? (
+              <img src={userInfo.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ backgroundColor: '#007aff', color: 'white', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🔳</div>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', fontSize: isMobile ? '0.75rem' : '0.85rem' }}>
+            <span style={{ fontWeight: '700', color: '#1d1d1f' }}>{userInfo.facilityName}</span>
+            <span style={{ color: '#86868b' }}>担当: {userInfo.staffName} 様</span>
+          </div>
         </div>
 
-        {/* 2行目：施設情報 ＆ 実務ボタン（固定） */}
-        <div style={{ position: 'sticky', top: 0, backgroundColor: 'white', padding: isMobile ? '10px 12px' : '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', zIndex: 110 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '20px' }}>
-            <div style={{ cursor: 'pointer', width: '36px', height: '36px', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => router.push('/')}>
-              {/* ★🔳から画像表示に切り替え */}
-              {userInfo.logoUrl ? (
-                <img src={userInfo.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ backgroundColor: '#007aff', color: 'white', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔳</div>
-              )}
-            </div>
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0' : '12px', fontSize: isMobile ? '0.75rem' : '0.85rem' }}>
-              <span style={{ fontWeight: '700', color: '#1d1d1f' }}>{userInfo.facilityName}</span>
-              {!isMobile && <span style={{ color: '#d2d2d7' }}>|</span>}
-              <span style={{ color: '#86868b' }}>{isMobile ? '' : '担当: '}{userInfo.staffName}{isMobile ? '' : ' 様'}</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '12px' }}>
-            <div style={{ position: 'relative' }}>
-              {/* 元の通知ボタンのスタイルを完全復元 */}
-              <button onClick={() => setShowNotificationModal(!showNotificationModal)} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: isMobile ? '8px' : '8px 16px', borderRadius: '10px', fontSize: isMobile ? '0.8rem' : '0.9rem', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                🔔{isMobile ? '' : '通知'} {urgentNotifications.length > 0 && <span style={{ backgroundColor: '#ff3b30', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.7rem', fontWeight: 'bold' }}>{urgentNotifications.length}</span>}
-              </button>
-              {showNotificationModal && (
-                <div style={{ position: 'absolute', top: '45px', right: 0, width: isMobile ? '260px' : '300px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', border: '1px solid #d2d2d7', padding: '16px', zIndex: 200 }}>
-                  <div style={{ fontWeight: 'bold', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '10px', fontSize: '0.9rem' }}>至急対応が必要</div>
-                  <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {urgentNotifications.length === 0 ? <div style={{ fontSize: '0.8rem', color: '#86868b', textAlign: 'center', padding: '20px 0' }}>ありません。</div> : urgentNotifications.map(item => (
-                      <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ padding: '10px', borderRadius: '8px', cursor: 'pointer', marginBottom: '8px', backgroundColor: '#fff5f5' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{item.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#ff3b30', fontWeight: '600' }}>残り {calculateRemainingDays(item.found_at)} 日</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 元の登録ボタンのスタイルを完全復元 */}
-            <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: isMobile ? '8px 10px' : '8px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.9rem', whiteSpace: 'nowrap' }}>
-              {isMobile ? '＋登録' : '+ 新規登録'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '16px' }}>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setShowNotificationModal(!showNotificationModal)} style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}>
+              🔔 {urgentNotifications.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', backgroundColor: '#ff3b30', color: 'white', borderRadius: '50%', padding: '2px 5px', fontSize: '0.6rem', fontWeight: 'bold' }}>{urgentNotifications.length}</span>}
             </button>
+            {showNotificationModal && (
+              <div style={{ position: 'absolute', top: '45px', right: 0, width: isMobile ? '260px' : '300px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', border: '1px solid #d2d2d7', padding: '16px', zIndex: 200 }}>
+                <div style={{ fontWeight: 'bold', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '10px', fontSize: '0.9rem' }}>至急対応が必要</div>
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {urgentNotifications.length === 0 ? <div style={{ fontSize: '0.8rem', color: '#86868b', textAlign: 'center', padding: '20px 0' }}>ありません。</div> : urgentNotifications.map(item => (
+                    <div key={item.id} onClick={() => router.push(`/items/${item.id}`)} style={{ padding: '10px', borderRadius: '8px', cursor: 'pointer', marginBottom: '8px', backgroundColor: '#fff5f5' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{item.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#ff3b30', fontWeight: '600' }}>残り {calculateRemainingDays(item.found_at)} 日</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+          <button onClick={() => router.push('/items/new')} style={{ backgroundColor: '#007aff', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '0.8rem' }}>+ 新規登録</button>
         </div>
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
           <StatCard title="🚨 届出未完了" count={unsubmittedCount} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?status=届出未完了')} />
-          <StatCard title="🚔 警察届出済" count={stats.policeReported.length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=警察届出済')} />
-          <StatCard title="🤝 お客様返却済" count={stats.returnedItems.length} color="#34c759" isMobile={isMobile} onClick={() => router.push('/items/list?status=お客様返却済')} />
-          <StatCard title="📦 回収済" count={stats.collectedItems.length} color="#8e8e93" isMobile={isMobile} onClick={() => router.push('/items/list?status=回収済')} />
-          <StatCard title="🗑️ 廃棄済" count={stats.disposedItems.length} color="#ff3b30" isMobile={isMobile} onClick={() => router.push('/items/list?status=廃棄済')} />
-          <StatCard title="🌐 全ての拾得物" count={stats.allCount} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list')} />
+          <StatCard title="🚔 警察届出済" count={items.filter(i => i.status === '警察届出済').length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=警察届出済')} />
+          <StatCard title="🤝 お客様返却済" count={items.filter(i => i.status === 'お客様返却済').length} color="#34c759" isMobile={isMobile} onClick={() => router.push('/items/list?status=お客様返却済')} />
+          <StatCard title="📦 回収済" count={items.filter(i => i.status === '回収済').length} color="#8e8e93" isMobile={isMobile} onClick={() => router.push('/items/list?status=回収済')} />
+          <StatCard title="🗑️ 廃棄済" count={items.filter(i => i.status === '廃棄済').length} color="#ff3b30" isMobile={isMobile} onClick={() => router.push('/items/list?status=廃棄済')} />
+          <StatCard title="🌐 全ての拾得物" count={items.length} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list')} />
         </div>
 
         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
