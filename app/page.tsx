@@ -111,7 +111,7 @@ export default function Dashboard() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, sans-serif', overflowX: 'hidden' }}>
       
-      {/* メインヘッダー（施設名・通知・新規登録）：この行が画面最上部に固定されます */}
+      {/* 2段目（メインヘッダー）：スクロール時に最上部に固定 */}
       <header style={{ 
         backgroundColor: 'white', 
         borderBottom: '1px solid #d2d2d7', 
@@ -163,7 +163,7 @@ export default function Dashboard() {
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '20px' }}>
-        {/* 統計カードセクション（維持） */}
+        {/* 統計カードセクション */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? '8px' : '16px', margin: '24px 0' }}>
           <StatCard title="🚨 届出未完了" count={items.filter(i => (i.status === '届出未完了' || !i.status) && !i.reported_to_police_at).length} color="#5856d6" isMobile={isMobile} onClick={() => router.push('/items/list?status=届出未完了')} />
           <StatCard title="🚔 警察届出済" count={items.filter(i => i.status === '警察届出済').length} color="#007aff" isMobile={isMobile} onClick={() => router.push('/items/list?status=警察届出済')} />
@@ -173,7 +173,7 @@ export default function Dashboard() {
           <StatCard title="🌐 全ての拾得物" count={items.length} color="#1d1d1f" isMobile={isMobile} onClick={() => router.push('/items/list')} />
         </div>
 
-        {/* 検索・フィルターセクション（維持） */}
+        {/* 検索・フィルターセクション */}
         <div style={{ backgroundColor: 'white', padding: isMobile ? '16px' : '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid #d2d2d7' }}>
           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-end', width: '100%', gap: isMobile ? '16px' : '32px' }}>
             <div style={{ flex: '1', minWidth: 0 }}>
@@ -194,7 +194,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* アイテムリストセクション（維持） */}
+        {/* 新着の拾得物セクション */}
         <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list')} getDeadlineInfo={getDeadlineInfo} isMobile={isMobile} />
       </main>
     </div>
