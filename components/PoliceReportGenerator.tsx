@@ -33,10 +33,14 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
   const [claimRights, setClaimRights] = useState('主張する');
   const reportRef = useRef<HTMLDivElement>(null);
 
+  // マイページから取得するプロフィール情報のステートを拡張
   const [fetchedProfile, setFetchedProfile] = useState({
     facilityName: '',
     address: '',
-    managerName: ''
+    managerName: '',
+    postalCode: '',      // 追加
+    phoneNumber: '',     // 追加
+    departmentName: '',  // 追加
   });
 
   useEffect(() => {
@@ -57,8 +61,12 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
           const meta = user.user_metadata || {};
           setFetchedProfile({
             facilityName: meta.facility_name || '',
-            address: meta.facility_address || meta.address || meta.facility_location || meta.location || meta.postal_address || '',
-            managerName: meta.manager_name || ''
+            // 住所のフォールバック処理を維持しつつ、メタデータから取得
+            address: meta.address || meta.facility_address || '',
+            managerName: meta.manager_name || '',
+            postalCode: meta.postal_code || '',      // 追加
+            phoneNumber: meta.phone_number || '',    // 追加
+            departmentName: meta.department_name || '', // 追加
           });
         }
       } catch (error) {
@@ -92,20 +100,16 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
     pdf.save(`拾得物届出書_${itemData.product_name}.pdf`);
   };
 
-  // ★追加：警察（岩手県警等）提出用CSV生成ロジック
+  // ★修正：マイページ情報を反映させたCSV生成ロジック
   const handleDownloadCSV = () => {
-    // 1. カテゴリー文字列（例: "大 / 中 / 小"）から小分類を抽出し、警察コード（例: 1601）に変換
     const itemType = (itemData.category_hint || '').split(' / ').pop() || '';
     const policeCode = getPoliceCategoryCode(itemType);
 
-    // 2. 現金合計の算出
     const cashCounts = itemData.cash_counts || {};
     const totalCash = Object.entries(cashCounts).reduce((acc: number, [deno, count]: [string, any]) => acc + (Number(deno) * (Number(count) || 0)), 0);
 
-    // 3. 権利主張フラグ（1: 主張する, 2: 放棄する）
     const claimFlag = claimRights === '主張する' ? '1' : '2';
 
-    // 4. 日付フォーマット（YYYYMMDDHHMM）
     let formattedDate = '';
     if (itemData.found_at) {
       const d = new Date(itemData.found_at);
@@ -115,33 +119,47 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
       }
     }
 
-    // 5. 特徴の30文字制限（警察システムのエラー回避）
     const desc = `色:${itemData.color} 特徴:${itemData.description}`.substring(0, 30);
 
-    // 6. CSVデータの構築（岩手県警察の標準レイアウト準拠）
-    const headers = ["物件番号", "拾得日時", "拾得場所", "物件種別コード", "物件名", "数量", "現金額", "特徴・備考", "所有権主張"];
+    // 施設情報の確定（Props優先、なければフェッチしたもの）
+    const fName = profileData?.facility_name || fetchedProfile.facilityName;
+    const fAddr = profileData?.address || fetchedProfile.address;
+    const fZip = fetchedProfile.postalCode;
+    const fTel = fetchedProfile.phoneNumber;
+    const fManager = profileData?.manager_name || fetchedProfile.managerName;
+    const fDept = fetchedProfile.departmentName;
+
+    // ヘッダーに届出人情報を追加（警察システムにより異なるが、標準的な「届出人情報」を付与）
+    const headers = [
+      "物件番号", "拾得日時", "拾得場所", "物件種別コード", "物件名", "数量", "現金額", "特徴・備考", "所有権主張",
+      "届出人名称", "郵便番号", "住所", "電話番号", "担当者名", "担当部署"
+    ];
+    
     const row = [
       itemData.management_number || '',
       formattedDate,
       location,
       policeCode,
       itemData.product_name,
-      "1", // 数量は原則1
+      "1",
       totalCash.toString(),
       desc,
-      claimFlag
+      claimFlag,
+      fName,
+      fZip,
+      fAddr,
+      fTel,
+      fManager,
+      fDept
     ];
 
-    // ダブルクォーテーションで囲み、カンマ区切りにする
     const escapeCSV = (arr: string[]) => arr.map(str => `"${String(str).replace(/"/g, '""')}"`).join(',');
     const csvContent = escapeCSV(headers) + '\n' + escapeCSV(row);
 
-    // 7. 文字化け防止策：BOM（Byte Order Mark）を付与してUTF-8で出力
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
     const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
-    // ダウンロード実行
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `警察提出用CSV_${itemData.product_name}.csv`);
@@ -151,6 +169,8 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
   };
 
   const displayManager = (itemData as any).registered_by || profileData?.manager_name || fetchedProfile.managerName || '';
+  // PDF表示用の連絡先行（電話番号と部署を追加）
+  const displayContact = `${displayManager} ${fetchedProfile.departmentName ? `(${fetchedProfile.departmentName})` : ''} ${fetchedProfile.phoneNumber ? ` TEL:${fetchedProfile.phoneNumber}` : ''}`;
 
   return (
     <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #e5e5e7', borderRadius: '12px', backgroundColor: '#fff' }}>
@@ -191,13 +211,11 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
           警察提出用PDFを生成
         </button>
         
-        {/* ★追加：CSVダウンロードボタン */}
         <button onClick={handleDownloadCSV} style={{ width: '100%', padding: '12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
           電子申請用CSVデータをダウンロード
         </button>
       </div>
 
-      {/* PDF生成用隠し要素（変更なし） */}
       <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -100, opacity: 0, pointerEvents: 'none' }}>
         <div ref={reportRef} style={{ width: '210mm', minHeight: '297mm', padding: '20mm', backgroundColor: 'white', color: 'black', fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif', boxSizing: 'border-box' }}>
           
@@ -220,8 +238,8 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
             <table style={{ width: '100%', fontSize: '11pt', borderCollapse: 'collapse' }}>
               <tbody>
                 <tr><td style={{ width: '25%', padding: '3px 0' }}>施設名・法人名:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.facility_name || fetchedProfile.facilityName || ''}</td></tr>
-                <tr><td style={{ padding: '3px 0' }}>所在地:</td><td style={{ borderBottom: '1px dotted black' }}>{profileData?.address || fetchedProfile.address || ''}</td></tr>
-                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}>{displayManager}</td></tr>
+                <tr><td style={{ padding: '3px 0' }}>所在地:</td><td style={{ borderBottom: '1px dotted black' }}>{`${fetchedProfile.postalCode ? `〒${fetchedProfile.postalCode} ` : ''}${profileData?.address || fetchedProfile.address || ''}`}</td></tr>
+                <tr><td style={{ padding: '3px 0' }}>担当者・連絡先:</td><td style={{ borderBottom: '1px dotted black' }}>{displayContact}</td></tr>
               </tbody>
             </table>
           </div>

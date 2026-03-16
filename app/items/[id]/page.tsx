@@ -114,20 +114,20 @@ export default function ItemDetailPage() {
     return photos;
   }, [item]);
 
-  // ★修正箇所: CSV生成に必要なデータを渡せるように拡張
+  // ★修正箇所: 子コンポーネントへ渡すデータに color を追加
   const itemDataForPdf = useMemo(() => {
     if (!item) return null;
     return {
       product_name: item.name,
       category_hint: item.category,
       location: item.location || "",
-      color: item.color || "", 
+      color: item.color || "", // 修正: ここが漏れていました
       description: item.description || "",
       image_url: item.photo_url || "",
       registered_by: item.registered_by,
-      found_at: item.found_at, // 拾得日時を追加
-      management_number: item.management_number, // 管理番号を追加
-      cash_counts: item.cash_counts // 現金内訳を追加
+      found_at: item.found_at,
+      management_number: item.management_number,
+      cash_counts: item.cash_counts
     };
   }, [item]);
 

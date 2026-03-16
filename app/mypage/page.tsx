@@ -12,8 +12,11 @@ export default function MyPage() {
   const [profile, setProfile] = useState({
     facilityName: '',
     managerName: '',
-    managerList: [] as string[], // 担当者名簿
+    managerList: [] as string[],
+    departmentName: '', // 追加
+    postalCode: '',     // 追加
     address: '',
+    phoneNumber: '',    // 追加
     email: '',
     logoUrl: '' 
   });
@@ -33,17 +36,21 @@ export default function MyPage() {
         return;
       }
 
-      const savedManager = user.user_metadata?.manager_name || '';
-      const savedList = user.user_metadata?.manager_list || [];
+      const meta = user.user_metadata || {};
+      const savedManager = meta.manager_name || '';
+      const savedList = meta.manager_list || [];
       const initialList = savedList.length > 0 ? savedList : (savedManager ? [savedManager] : []);
 
       setProfile({
-        facilityName: user.user_metadata?.facility_name || '',
+        facilityName: meta.facility_name || '',
         managerName: savedManager,
         managerList: initialList,
-        address: user.user_metadata?.address || '', 
+        departmentName: meta.department_name || '', // 追加
+        postalCode: meta.postal_code || '',         // 追加
+        address: meta.address || '', 
+        phoneNumber: meta.phone_number || '',       // 追加
         email: user.email || '',
-        logoUrl: user.user_metadata?.logo_url || '' 
+        logoUrl: meta.logo_url || '' 
       });
       setLoading(false);
     }
@@ -84,7 +91,10 @@ export default function MyPage() {
         facility_name: profile.facilityName,
         manager_name: profile.managerName,
         manager_list: profile.managerList,
+        department_name: profile.departmentName, // 追加
+        postal_code: profile.postalCode,         // 追加
         address: profile.address, 
+        phone_number: profile.phoneNumber,       // 追加
         logo_url: profile.logoUrl 
       }
     });
@@ -92,7 +102,7 @@ export default function MyPage() {
     if (error) {
       alert('更新に失敗しました');
     } else {
-      alert('プロフィールを更新しました');
+      alert('プロフィールを更新しました。警察届出書類に反映されます。');
     }
     setSaving(false);
   };
@@ -154,23 +164,34 @@ export default function MyPage() {
               <input type="text" value={profile.email} disabled style={{ ...inputStyle, backgroundColor: '#f5f5f7', color: '#86868b' }} />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>施設名</label>
-              <input type="text" value={profile.facilityName} onChange={(e) => setProfile({...profile, facilityName: e.target.value})} style={inputStyle} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>施設名</label>
+                <input type="text" value={profile.facilityName} onChange={(e) => setProfile({...profile, facilityName: e.target.value})} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>担当部署</label>
+                <input type="text" value={profile.departmentName} placeholder="例: 総務課" onChange={(e) => setProfile({...profile, departmentName: e.target.value})} style={inputStyle} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>郵便番号</label>
+                <input type="text" value={profile.postalCode} placeholder="020-0000" onChange={(e) => setProfile({...profile, postalCode: e.target.value})} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>所在地</label>
+                <input type="text" value={profile.address} placeholder="岩手県盛岡市..." onChange={(e) => setProfile({...profile, address: e.target.value})} style={inputStyle} />
+              </div>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>所在地（PDFに反映されます）</label>
-              <input 
-                type="text" 
-                value={profile.address} 
-                placeholder="例: 東京都渋谷区神南1-2-3" 
-                onChange={(e) => setProfile({...profile, address: e.target.value})} 
-                style={inputStyle} 
-              />
+              <label style={{ display: 'block', fontSize: '0.75rem', color: '#1d1d1f', fontWeight: '600' }}>代表電話番号（PDF/CSVに必須）</label>
+              <input type="tel" value={profile.phoneNumber} placeholder="019-6xx-xxxx" onChange={(e) => setProfile({...profile, phoneNumber: e.target.value})} style={inputStyle} />
             </div>
 
-            <div style={{ padding: '15px', backgroundColor: '#fcfcfc', border: '1px solid #e5e5ea', borderRadius: '12px' }}>
+            <div style={{ padding: '15px', backgroundColor: '#fcfcfc', border: '1px solid #e5e5ea', borderRadius: '12px', marginTop: '10px' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#1d1d1f', fontWeight: '700', marginBottom: '12px' }}>担当者の管理（切り替え・編集）</label>
               
               <div style={{ marginBottom: '12px' }}>
@@ -217,7 +238,6 @@ export default function MyPage() {
                 </div>
               </div>
 
-              {/* ★追加箇所：登録済み名簿の一覧と削除機能 */}
               {profile.managerList.length > 0 && (
                 <div>
                   <label style={{ display: 'block', fontSize: '0.7rem', color: '#86868b', fontWeight: '600', marginBottom: '8px' }}>登録済みの名簿（✕で削除）</label>
