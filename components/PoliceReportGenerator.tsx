@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { createBrowserClient } from '@supabase/ssr';
+// ★追加：警察コード変換関数を読み込み
+import { getPoliceCategoryCode } from '@/lib/categories';
 
 interface PoliceReportProps {
   itemData: {
@@ -15,6 +17,9 @@ interface PoliceReportProps {
     image_url?: string;
     found_at?: string;
     registered_by?: string;
+    // ★追加：CSV出力に必要なデータ項目を受け取れるように拡張
+    management_number?: string;
+    cash_counts?: { [key: string]: number };
   };
   profileData?: {
     facility_name?: string;
@@ -50,8 +55,6 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const meta = user.user_metadata || {};
-          console.log("【デバッグ】ユーザーメタデータ:", meta); 
-          
           setFetchedProfile({
             facilityName: meta.facility_name || '',
             address: meta.facility_address || meta.address || meta.facility_location || meta.location || meta.postal_address || '',
@@ -87,6 +90,64 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
     }
     pdf.addImage(imgData, 'PNG', (pdfWidth - imgWidth) / 2, 0, imgWidth, imgHeight);
     pdf.save(`拾得物届出書_${itemData.product_name}.pdf`);
+  };
+
+  // ★追加：警察（岩手県警等）提出用CSV生成ロジック
+  const handleDownloadCSV = () => {
+    // 1. カテゴリー文字列（例: "大 / 中 / 小"）から小分類を抽出し、警察コード（例: 1601）に変換
+    const itemType = (itemData.category_hint || '').split(' / ').pop() || '';
+    const policeCode = getPoliceCategoryCode(itemType);
+
+    // 2. 現金合計の算出
+    const cashCounts = itemData.cash_counts || {};
+    const totalCash = Object.entries(cashCounts).reduce((acc: number, [deno, count]: [string, any]) => acc + (Number(deno) * (Number(count) || 0)), 0);
+
+    // 3. 権利主張フラグ（1: 主張する, 2: 放棄する）
+    const claimFlag = claimRights === '主張する' ? '1' : '2';
+
+    // 4. 日付フォーマット（YYYYMMDDHHMM）
+    let formattedDate = '';
+    if (itemData.found_at) {
+      const d = new Date(itemData.found_at);
+      const p = (n: number) => n.toString().padStart(2, '0');
+      if (!isNaN(d.getTime())) {
+        formattedDate = `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
+      }
+    }
+
+    // 5. 特徴の30文字制限（警察システムのエラー回避）
+    const desc = `色:${itemData.color} 特徴:${itemData.description}`.substring(0, 30);
+
+    // 6. CSVデータの構築（岩手県警察の標準レイアウト準拠）
+    const headers = ["物件番号", "拾得日時", "拾得場所", "物件種別コード", "物件名", "数量", "現金額", "特徴・備考", "所有権主張"];
+    const row = [
+      itemData.management_number || '',
+      formattedDate,
+      location,
+      policeCode,
+      itemData.product_name,
+      "1", // 数量は原則1
+      totalCash.toString(),
+      desc,
+      claimFlag
+    ];
+
+    // ダブルクォーテーションで囲み、カンマ区切りにする
+    const escapeCSV = (arr: string[]) => arr.map(str => `"${String(str).replace(/"/g, '""')}"`).join(',');
+    const csvContent = escapeCSV(headers) + '\n' + escapeCSV(row);
+
+    // 7. 文字化け防止策：BOM（Byte Order Mark）を付与してUTF-8で出力
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    // ダウンロード実行
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `警察提出用CSV_${itemData.product_name}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const displayManager = (itemData as any).registered_by || profileData?.manager_name || fetchedProfile.managerName || '';
@@ -125,10 +186,18 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
         </div>
       </div>
 
-      <button onClick={handleDownloadPDF} style={{ width: '100%', padding: '12px', backgroundColor: '#007aff', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-        警察提出用PDFを生成
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <button onClick={handleDownloadPDF} style={{ width: '100%', padding: '12px', backgroundColor: '#007aff', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+          警察提出用PDFを生成
+        </button>
+        
+        {/* ★追加：CSVダウンロードボタン */}
+        <button onClick={handleDownloadCSV} style={{ width: '100%', padding: '12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+          電子申請用CSVデータをダウンロード
+        </button>
+      </div>
 
+      {/* PDF生成用隠し要素（変更なし） */}
       <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -100, opacity: 0, pointerEvents: 'none' }}>
         <div ref={reportRef} style={{ width: '210mm', minHeight: '297mm', padding: '20mm', backgroundColor: 'white', color: 'black', fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif', boxSizing: 'border-box' }}>
           

@@ -114,7 +114,7 @@ export default function ItemDetailPage() {
     return photos;
   }, [item]);
 
-  // ★修正箇所：DBから取得した registered_by を PDF 生成コンポーネントに渡す
+  // ★修正箇所: CSV生成に必要なデータを渡せるように拡張
   const itemDataForPdf = useMemo(() => {
     if (!item) return null;
     return {
@@ -124,7 +124,10 @@ export default function ItemDetailPage() {
       color: item.color || "", 
       description: item.description || "",
       image_url: item.photo_url || "",
-      registered_by: item.registered_by // ここを追加することでDB保存時の担当者名がPDFに反映されます
+      registered_by: item.registered_by,
+      found_at: item.found_at, // 拾得日時を追加
+      management_number: item.management_number, // 管理番号を追加
+      cash_counts: item.cash_counts // 現金内訳を追加
     };
   }, [item]);
 
@@ -207,6 +210,31 @@ export default function ItemDetailPage() {
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
                 
+                {item.category && (item.category.includes("現金") || item.category.includes("財布類")) && 
+                 item.cash_counts && 
+                 Object.values(item.cash_counts).reduce((a: number, b: any) => a + (Number(b) || 0), 0) > 0 && (
+                  <div style={{ marginBottom: '32px', padding: '24px', backgroundColor: '#fffbe6', borderRadius: '16px', border: '1px solid #ffe58f' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                      <span style={{ fontSize: '1.4rem', marginRight: '10px' }}>💰</span>
+                      <h3 style={{ fontSize: '1.1rem', margin: 0, color: '#856404', fontWeight: 'bold' }}>拾得時 現金内訳</h3>
+                    </div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#d46b08', paddingBottom: '16px', borderBottom: '1px dashed #ffe58f', marginBottom: '16px' }}>
+                      ¥ {Object.entries(item.cash_counts).reduce((acc: number, [deno, count]: [string, any]) => acc + (Number(deno) * (Number(count) || 0)), 0).toLocaleString()}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      {Object.entries(item.cash_counts)
+                        .filter(([_, count]: [string, any]) => (Number(count) || 0) > 0)
+                        .sort((a, b) => Number(b[0]) - Number(a[0]))
+                        .map(([deno, count]) => (
+                          <div key={deno} style={{ fontSize: '0.95rem', color: '#595959', display: 'flex', justifyContent: 'space-between', paddingRight: '10px' }}>
+                            <span>{Number(deno).toLocaleString()}円</span>
+                            <span style={{ fontWeight: 'bold' }}>{Number(count) || 0} 枚</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ marginTop: '32px', padding: '20px', backgroundColor: '#f0f7ff', borderRadius: '14px', border: '1px solid #cce5ff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <label style={{ color: '#007aff', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase' }}>🚔 警察届出情報</label>

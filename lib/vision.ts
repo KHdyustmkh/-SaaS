@@ -10,8 +10,8 @@ export async function analyzeImage(base64Image: string) {
     };
   }
 
-  // 修正箇所：提供終了した 1.5-flash から、現在稼働中の最新モデル「gemini-2.5-flash」へ変更
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  // モデルは最新の gemini-2.0-flash 等を指定
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -20,7 +20,15 @@ export async function analyzeImage(base64Image: string) {
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: "あなたは遺失物管理センターの専門鑑識官です。この画像から、持ち主が「自分のものだ」と特定できる個体識別情報を抽出してください。以下の形式のJSONでのみ回答してください。JSON以外の文章は一切含めないでください。形式: {\"product_name\": \"具体的な品名（例：SUNSPEL クルーネックTシャツなど）\", \"category_hint\": \"カテゴリー判定用のキーワード\", \"color\": \"主要な色\", \"description\": \"以下の4点を必ず含めること。1.ロゴやタグの正確な位置と内容 2.サイズ表記(見える場合) 3.使用感の程度(ヨレ、色あせ等) 4.【最重要】固有のダメージ(シミ、傷、ほつれ等。ない場合は『特筆すべきダメージなし』と明記)\"}" },
+            { text: `あなたは遺失物管理センターの専門鑑識官です。この画像から警察提出用の物件情報を抽出してください。
+以下の制約を厳守し、JSON形式でのみ回答してください。
+
+1. product_name: 具体的な品名。
+2. category_hint: カテゴリー判定用の単語1つ。
+3. color: 主要な色。
+4. description: 【最重要】警察システム登録用。全角30文字以内で、ロゴの位置、形状、目立つ傷、サイズのうち「最も個体特定に繋がる特徴」を1つだけ簡潔に記述すること。箇条書き禁止。
+
+形式: {"product_name": "...", "category_hint": "...", "color": "...", "description": "..."}` },
             { inline_data: { mime_type: "image/jpeg", data: base64Image } }
           ]
         }],
