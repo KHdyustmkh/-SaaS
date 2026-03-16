@@ -20,7 +20,7 @@ export async function analyzeImage(base64Image: string) {
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: "この画像にあるものを解析し、以下のJSON形式のみで回答してください。JSON以外の文章は一切含めないでください。形式: {\"product_name\": \"品名\", \"category_hint\": \"カテゴリー\", \"color\": \"色\", \"description\": \"特徴\"}" },
+            { text: "あなたは遺失物管理センターの専門鑑識官です。この画像から、持ち主が「自分のものだ」と特定できる個体識別情報を抽出してください。以下の形式のJSONでのみ回答してください。JSON以外の文章は一切含めないでください。形式: {\"product_name\": \"具体的な品名（例：SUNSPEL クルーネックTシャツなど）\", \"category_hint\": \"カテゴリー判定用のキーワード\", \"color\": \"主要な色\", \"description\": \"以下の4点を必ず含めること。1.ロゴやタグの正確な位置と内容 2.サイズ表記(見える場合) 3.使用感の程度(ヨレ、色あせ等) 4.【最重要】固有のダメージ(シミ、傷、ほつれ等。ない場合は『特筆すべきダメージなし』と明記)\"}" },
             { inline_data: { mime_type: "image/jpeg", data: base64Image } }
           ]
         }],
