@@ -10,7 +10,7 @@ export default function ItemDetailPage() {
   const id = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
   
   const [item, setItem] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null); // ★プロフィール情報を保持するステートを追加
+  const [profile, setProfile] = useState<any>(null); 
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [isEditingPolice, setIsEditingPolice] = useState(false);
@@ -114,6 +114,7 @@ export default function ItemDetailPage() {
     return photos;
   }, [item]);
 
+  // ★修正箇所：DBから取得した registered_by を PDF 生成コンポーネントに渡す
   const itemDataForPdf = useMemo(() => {
     if (!item) return null;
     return {
@@ -122,7 +123,8 @@ export default function ItemDetailPage() {
       location: item.location || "",
       color: item.color || "", 
       description: item.description || "",
-      image_url: item.photo_url || ""
+      image_url: item.photo_url || "",
+      registered_by: item.registered_by // ここを追加することでDB保存時の担当者名がPDFに反映されます
     };
   }, [item]);
 
@@ -132,7 +134,6 @@ export default function ItemDetailPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      // ★アイテム情報とプロフィール情報を並列で取得
       const [itemRes, profileRes] = await Promise.all([
         supabase.from('lost_items').select('*').eq('id', id).single(),
         supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -246,7 +247,6 @@ export default function ItemDetailPage() {
 
                 {itemDataForPdf && (
                   <div style={{ marginTop: '20px' }}>
-                    {/* ★profileData を子コンポーネントに渡すように修正 */}
                     <PoliceReportGenerator 
                       itemData={itemDataForPdf} 
                       profileData={profile} 

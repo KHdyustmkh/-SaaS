@@ -69,11 +69,16 @@ export default function NewItemPage() {
       const base64 = await convertToBase64(imageFiles[0]);
       const aiResult = await analyzeImage(base64); 
       
-      // ★追加：PDF生成用にAIの結果を保存
+      // --- 修正箇所：現在のユーザー名を取得してAI結果に結合 ---
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentManager = user?.user_metadata?.manager_name || '未設定';
+
       setAiRawResult({
         ...aiResult,
-        image_url: imagePreviews[0] // プレビュー用のURLを添付
+        image_url: imagePreviews[0],
+        registered_by: currentManager // PDF生成コンポーネントへ担当者名を伝達
       });
+      // --------------------------------------------------
 
       setName(aiResult.product_name || "");
       const autoDesc = `色: ${aiResult.color}\n特徴: ${aiResult.description}`;
@@ -125,7 +130,7 @@ export default function NewItemPage() {
       const { error: dbError } = await supabase.from('lost_items').insert([{
         management_number: managementNumber,
         name: name,
-        status: status, // 内部ステータス（届出未完了）を使用
+        status: status, 
         found_at: new Date(foundAt).toISOString(),
         category: combinedCategory,
         location: location,
@@ -180,7 +185,7 @@ export default function NewItemPage() {
             )}
           </div>
 
-          {/* ★AI解析が終わったらPDF生成UIを表示する */}
+          {/* AI解析が終わったらPDF生成UIを表示する */}
           {aiRawResult && (
             <PoliceReportGenerator itemData={aiRawResult} />
           )}

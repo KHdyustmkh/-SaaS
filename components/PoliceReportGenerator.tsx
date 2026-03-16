@@ -14,7 +14,7 @@ interface PoliceReportProps {
     description: string;
     image_url?: string;
     found_at?: string;
-    registered_by?: string; // ★追加：DBのカラム名と一致
+    registered_by?: string;
   };
   profileData?: {
     facility_name?: string;
@@ -89,9 +89,7 @@ export const PoliceReportGenerator: React.FC<PoliceReportProps> = ({ itemData, p
     pdf.save(`拾得物届出書_${itemData.product_name}.pdf`);
   };
 
-  // ★重要：担当者表示の優先順位を定義
-  // 1. アイテム登録時の担当者名(registered_by) 2. 渡されたプロファイル 3. 現在ログイン中のプロファイル
-  const displayManager = itemData.registered_by || profileData?.manager_name || fetchedProfile.managerName || '';
+  const displayManager = (itemData as any).registered_by || profileData?.manager_name || fetchedProfile.managerName || '';
 
   return (
     <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #e5e5e7', borderRadius: '12px', backgroundColor: '#fff' }}>
