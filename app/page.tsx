@@ -3,6 +3,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+// ★追加: AIマッチングオペレーターのインポート
+import { AiMatchingOperator } from '@/components/AiMatchingOperator';
 
 interface LostItem {
   id: string;
@@ -198,6 +200,9 @@ export default function Dashboard() {
 
         {/* 新着の拾得物セクション */}
         <StatusSection title="✨ 新着の拾得物" items={filteredItems.slice(0, 4)} onSeeAll={() => router.push('/items/list')} getDeadlineInfo={getDeadlineInfo} isMobile={isMobile} />
+        
+        {/* ★追加: AIマッチングオペレーターの配置 */}
+        <AiMatchingOperator />
       </main>
     </div>
   );
