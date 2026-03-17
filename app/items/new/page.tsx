@@ -3,7 +3,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-// convertToBase64 はそのまま使用し、analyzeImage の直接呼び出しを内部APIに置き換えます
 import { convertToBase64 } from '../../../lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
@@ -78,14 +77,13 @@ export default function NewItemPage() {
     setImagePreviews(newPreviews);
   };
 
-  // 修正箇所: AI解析ロジックを自前APIへのフェッチに変更
   const handleAIAnalysis = async () => {
     if (imageFiles.length === 0) return;
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
       
-      // 【修正】lib/utils の analyzeImage を使わず、/api/analyze を叩く
+      // /api/analyze 経由で判定を実行
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,7 +110,6 @@ export default function NewItemPage() {
       
       let matched = false;
 
-      // カテゴリー照合ロジックは維持
       outerLoop:
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
@@ -139,7 +136,7 @@ export default function NewItemPage() {
       }
     } catch (error) {
       console.error("AI解析エラー:", error);
-      alert('AIの判定に失敗しました。サーバーログを確認してください。');
+      alert('AIの判定に失敗しました。');
     } finally { 
       setIsAnalyzing(false); 
     }
