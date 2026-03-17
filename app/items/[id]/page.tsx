@@ -4,6 +4,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
+import { GoogleGenerativeAI } from "@google/generative-ai"; 
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -40,11 +41,16 @@ export default function ItemDetailPage() {
     setActivePhotoIndex(-1); 
   };
 
-  // ---------------------------------------------------------
-  // AI判定ロジック：画像48の404を回避するために /api/analyze を叩く
-  // ---------------------------------------------------------
+  // 【復旧】AI判定のみを以前の「動いていた成功コード」へ差し戻し
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
+    
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY; 
+    if (!apiKey) {
+      alert("APIキー(NEXT_PUBLIC_GEMINI_API_KEY)が見つかりません。");
+      return;
+    }
+
     setUpdating(true);
     try {
       const response = await fetch(item.photo_url);
@@ -56,21 +62,20 @@ export default function ItemDetailPage() {
         if (!result) return;
         const base64data = result.split(',')[1];
 
-        // 手順1で作成した窓口を呼び出す
-        const aiResponse = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64data }),
-        });
+        // 404の原因だったfetchを取り払い、ブラウザ直接実行へ戻す
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const prompt = "この画像の拾得物を分析し、以下のJSON形式で返してください： { \"product_name\": \"品名\", \"category_hint\": \"カテゴリー\", \"description\": \"詳細説明\" }";
 
-        if (!aiResponse.ok) {
-          const errorData = await aiResponse.json();
-          throw new Error(errorData.error || `APIエラー: ${aiResponse.status}`);
-        }
+        const aiResult = await model.generateContent([
+          prompt,
+          { inlineData: { data: base64data, mimeType: "image/jpeg" } },
+        ]);
+
+        const text = aiResult.response.text();
+        const jsonStr = text.replace(/```json|```/g, "").trim();
+        const res = JSON.parse(jsonStr);
         
-        const res = await aiResponse.json();
-        
-        // Supabaseへの保存
         const { error } = await supabase.from('lost_items').update({
           name: res["product_name"] || item.name,
           category: res["category_hint"] || item.category,
@@ -79,7 +84,6 @@ export default function ItemDetailPage() {
 
         if (error) throw error;
         
-        // 画面の表示を更新
         setItem((prev: any) => ({ 
           ...prev, 
           name: res["product_name"] || prev.name,
@@ -218,7 +222,6 @@ export default function ItemDetailPage() {
           </div>
         </div>
 
-        {/* --- 画像・プレビューUI (全維持) --- */}
         <div style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', padding: '20px' }}>
             <div style={{ width: '100%', height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
@@ -245,7 +248,6 @@ export default function ItemDetailPage() {
           </div>
 
           <div style={{ padding: '40px' }}>
-            {/* --- ステータス・基本情報 (全維持) --- */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
                 <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: '0 0 8px 0', color: '#1d1d1f' }}>{item.name}</h1>
@@ -267,8 +269,6 @@ export default function ItemDetailPage() {
               <section>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
-                
-                {/* --- 警察連携UI (全維持) --- */}
                 <div style={{ marginTop: '32px', padding: '24px', backgroundColor: '#f0f7ff', borderRadius: '16px', border: '1px solid #cce5ff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <label style={{ color: '#007aff', fontSize: '0.9rem', fontWeight: 'bold' }}>🚔 警察届出情報</label>
@@ -291,7 +291,6 @@ export default function ItemDetailPage() {
                   {itemDataForPdf && <PoliceReportGenerator itemData={itemDataForPdf} profileData={profile} />}
                 </div>
               </section>
-
               <section>
                 <label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>詳細説明</label>
                 <div style={{ backgroundColor: '#f5f5f7', padding: '20px', borderRadius: '14px', minHeight: '120px', color: '#1d1d1f', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
