@@ -4,7 +4,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// GoogleGenerativeAI のインポートは不要になったため削除
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -41,62 +41,61 @@ export default function ItemDetailPage() {
     setActivePhotoIndex(-1); 
   };
 
-  // AI判定とデータベース保存の直接実行
+  // AI判定とデータベース保存の実行（サーバー側API Route経由）
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY; 
-    if (!apiKey) {
-      alert("APIキーが見つかりません。Vercelの設定を確認してください。");
-      return;
-    }
-
     setUpdating(true);
     try {
+      // 1. 画像をBase64に変換
       const response = await fetch(item.photo_url);
       const blob = await response.blob();
-      const reader = new FileReader();
+      const base64data = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+        reader.readAsDataURL(blob);
+      });
+
+      // 2. サーバー側のAPI（/api/analyze）を呼び出し
+      const aiResponse = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64data }),
+      });
+
+      if (!aiResponse.ok) {
+        const errorData = await aiResponse.json();
+        throw new Error(errorData.error || 'AI判定に失敗しました');
+      }
       
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64result = reader.result as string;
-        const base64data = base64result.split(',')[1];
+      const data = await aiResponse.json();
+      const text = data.text;
+      
+      // JSON部分を抽出して解析
+      const jsonStr = text.replace(/```json|```/g, "").trim();
+      const res = JSON.parse(jsonStr);
+      
+      // 3. データベース（lost_items）を更新
+      const { error } = await supabase.from('lost_items').update({
+        name: res["product_name"] || item.name,
+        category: res["category_hint"] || item.category,
+        description: res["description"] || item.description
+      }).eq('id', id);
 
-       const genAI = new GoogleGenerativeAI(apiKey);
-        // 最もシンプルで安定した呼び出し形式に変更
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-        
-        const currentPrompt = "この画像の拾得物を分析し、以下のJSON形式で返してください： { \"product_name\": \"品名\", \"category_hint\": \"カテゴリー\", \"description\": \"詳細説明\" }";
-
-        const aiResult = await model.generateContent([
-          currentPrompt,
-          { inlineData: { data: base64data, mimeType: "image/jpeg" } },
-        ]);
-
-        const text = aiResult.response.text();
-        const jsonStr = text.replace(/```json|```/g, "").trim();
-        const res = JSON.parse(jsonStr);
-        
-        // データベースに「カテゴリー(category)」を含めて保存
-        const { error } = await supabase.from('lost_items').update({
-          name: res["product_name"] || item.name,
-          category: res["category_hint"] || item.category,
-          description: res["description"] || item.description
-        }).eq('id', id);
-
-        if (error) throw error;
-        
-        setItem((prev: any) => ({ 
-          ...prev, 
-          name: res["product_name"] || prev.name,
-          category: res["category_hint"] || prev.category,
-          description: res["description"] || prev.description
-        }));
-        
-        alert('AI再判定と大分類の保存が完了しました。');
-      };
+      if (error) throw error;
+      
+      setItem((prev: any) => ({ 
+        ...prev, 
+        name: res["product_name"] || prev.name,
+        category: res["category_hint"] || prev.category,
+        description: res["description"] || prev.description
+      }));
+      
+      alert('AI再判定と大分類の保存が完了しました。');
+      
     } catch (error: any) {
-      alert('AI判定失敗: ' + error.message);
+      console.error("AI Analysis Error:", error);
+      alert('エラーが発生しました: ' + error.message);
     } finally {
       setUpdating(false);
     }
