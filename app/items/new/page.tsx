@@ -3,7 +3,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-// ★修正箇所：読み込み先を修正済みの utils に一本化。他は一切変更なし。
+// ★修正箇所：読み込み先を修正済みの utils に一本化。
 import { analyzeImage, convertToBase64 } from '../../../lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
@@ -49,7 +49,6 @@ export default function NewItemPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [rightsFlags, setRightsFlags] = useState({ reward: 0, ownership: 0, disclosure: 0 });
 
-  // ★追加：現金内訳用のステート
   const [cashCounts, setCashCounts] = useState<{ [key: string]: number }>({});
   const [totalCashAmount, setTotalCashAmount] = useState<number>(0);
 
@@ -57,7 +56,6 @@ export default function NewItemPage() {
   const subCategories = useMemo(() => mainCategory ? Object.keys(CATEGORY_TREE[mainCategory]) : [], [mainCategory]);
   const itemTypes = useMemo(() => mainCategory && subCategory ? CATEGORY_TREE[mainCategory][subCategory] : [], [mainCategory, subCategory]);
 
-  // ★追加：現金合計が変更されたときに内訳を自動推計する（任意調整可能）
   const autoEstimateCash = (amount: number) => {
     let rem = amount;
     const newCounts: { [key: string]: number } = {};
@@ -93,15 +91,17 @@ export default function NewItemPage() {
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
-      // ここで lib/utils 側の 安定版(v1) analyzeImage が確実に呼び出されます
       const aiResult = await analyzeImage(base64); 
       
       const { data: { user } } = await supabase.auth.getUser();
       const currentManager = user?.user_metadata?.manager_name || '未設定';
 
       setAiRawResult({ ...aiResult, image_url: imagePreviews[0], registered_by: currentManager });
+      
+      // ★修正：AI判定結果をセット（警察IDの反映を追加）
       setName(aiResult.product_name || "");
       setDescription(aiResult.description || "");
+      setManagementNumber(aiResult.police_id || ""); // ここに1行追加しました
       
       const targetHint = aiResult.category_hint || "";
       outerLoop:
@@ -169,7 +169,6 @@ export default function NewItemPage() {
         location_type_code: 2, 
         finder_type_code: 1,   
         rights_flags: rightsFlags,
-        // ★追加：現金内訳を保存
         cash_counts: cashCounts
       }]);
 
@@ -186,7 +185,7 @@ export default function NewItemPage() {
           <h1 style={{ fontSize: '1.5rem', margin: 0 }}>拾得物 新規登録</h1>
           <button type="button" onClick={() => router.push('/')} style={{ padding: '8px 16px', backgroundColor: '#e5e5e7', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>キャンセル</button>
         </div>
-        {errorMsg && <div style={{ backgroundColor: '#fff1f0', color: '#f5222d', padding: '10px', borderRadius: '#6px', marginBottom: '20px' }}>{errorMsg}</div>}
+        {errorMsg && <div style={{ backgroundColor: '#fff1f0', color: '#f5222d', padding: '10px', borderRadius: '6px', marginBottom: '20px' }}>{errorMsg}</div>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>管理番号 *</label><input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
