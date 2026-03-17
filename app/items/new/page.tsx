@@ -3,12 +3,10 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-// ★修正箇所：読み込み先を修正済みの utils に一本化。
 import { analyzeImage, convertToBase64 } from '../../../lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
 
-// 金種リストの定義
 const DENOMINATIONS = [
   { label: '10,000円', key: '10000' },
   { label: '5,000円', key: '5000' },
@@ -79,13 +77,6 @@ export default function NewItemPage() {
     setImagePreviews(newPreviews);
   };
 
-  const removeImage = (index: number) => {
-    const newFiles = imageFiles.filter((_, i) => i !== index);
-    const newPreviews = imagePreviews.filter((_, i) => i !== index);
-    setImageFiles(newFiles);
-    setImagePreviews(newPreviews);
-  };
-
   const handleAIAnalysis = async () => {
     if (imageFiles.length === 0) return;
     setIsAnalyzing(true);
@@ -97,18 +88,26 @@ export default function NewItemPage() {
       const currentManager = user?.user_metadata?.manager_name || '未設定';
 
       setAiRawResult({ ...aiResult, image_url: imagePreviews[0], registered_by: currentManager });
-      
-      // ★修正：AI判定結果をセット（警察IDの反映を追加）
       setName(aiResult.product_name || "");
       setDescription(aiResult.description || "");
-      setManagementNumber(aiResult.police_id || ""); // ここに1行追加しました
+      setManagementNumber(aiResult.police_id || "");
       
-      const targetHint = aiResult.category_hint || "";
+      // AIの回答をあなたの CATEGORY_TREE の用語に「翻訳」するマッピング
+      const aliasMap: { [key: string]: string } = {
+        "かばん": "かばん・袋物",
+        "日用品": "日用品・雑貨",
+        "文具": "書籍・文具",
+      };
+      
+      const rawHint = aiResult.category_hint || "";
+      const targetHint = aliasMap[rawHint] || rawHint;
+      
       outerLoop:
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
           for (const type of CATEGORY_TREE[main][sub]) {
-            if (targetHint.includes(type) || type.includes(targetHint)) {
+            // 前方一致または部分一致で、確実に大・中・小をセットする
+            if (targetHint && (type.includes(targetHint) || targetHint.includes(type))) {
               setMainCategory(main);
               setSubCategory(sub);
               setItemType(type);
@@ -236,7 +235,6 @@ export default function NewItemPage() {
                   }}
                   style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid #fab005' }}
                 />
-                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '5px' }}>※金額を入力すると枚数が自動推計されます。手動変更も可能です。</p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {DENOMINATIONS.map(({ label, key }) => (
