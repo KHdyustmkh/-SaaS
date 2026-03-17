@@ -1,21 +1,24 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-// 1. スタイリング用共通関数
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 /**
- * 画像をAI(Gemini)で解析する関数
- * 最新の安定動作が確認されている「gemini-1.5-flash-latest」エイリアスを使用
+ * 二度と止まらないためのAI解析関数
+ * 1. Flashモデル(高速)を試行
+ * 2. 失敗(404等)した場合、自動でProモデル(高機能)へ切り替え
  */
 export async function analyzeImage(base64Image: string) {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  if (!apiKey) throw new Error("APIキーが設定されていません。");
+  if (!apiKey) throw new Error("APIキーが設定されていません。環境変数を確認してください。");
 
-  // 【最重要修正】404を回避するための最新エンドポイントURL
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+  // 試行するエンドポイントの優先順位リスト
+  const endpoints = [
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${apiKey}`
+  ];
 
   const payload = {
     contents: [{
@@ -26,32 +29,39 @@ export async function analyzeImage(base64Image: string) {
     }]
   };
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+  let lastError = "";
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      // エラーの詳細をコンソールに出力して追跡しやすくする
-      console.error("Gemini API Error Details:", errorData);
-      throw new Error(errorData.error?.message || "APIリクエスト失敗");
+  // 順番にエンドポイントを叩く（防弾ループ）
+  for (const url of endpoints) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        
+        return {
+          product_name: text.match(/名前[:：]\s*(.*)/)?.[1] || "不明なアイテム",
+          category_hint: text.match(/カテゴリー[:：]\s*(.*)/)?.[1] || "一般",
+          description: text
+        };
+      } else {
+        const err = await response.json();
+        lastError = err.error?.message || `Status: ${response.status}`;
+        console.warn(`Endpoint failed: ${url}, trying next...`, lastError);
+      }
+    } catch (e: any) {
+      lastError = e.message;
+      console.error(`Fetch error on ${url}:`, e);
     }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    
-    return {
-      product_name: text.match(/名前[:：]\s*(.*)/)?.[1] || "不明なアイテム",
-      category_hint: text.match(/カテゴリー[:：]\s*(.*)/)?.[1] || "一般",
-      description: text
-    };
-  } catch (error: any) {
-    console.error("AI解析エラー:", error);
-    throw new Error(`AI判定失敗: ${error.message}`);
   }
+
+  // すべてのモデルが全滅した場合のみエラーを投げる
+  throw new Error(`全AIモデルが応答しません。Google側の制限かAPIキーの不備です: ${lastError}`);
 }
 
 /**
@@ -61,10 +71,4 @@ export const convertToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => {
-      const base64String = reader.result?.toString().split(',')[1];
-      resolve(base64String || "");
-    };
-    reader.onerror = (error) => reject(error);
-  });
-};
+    reader.
