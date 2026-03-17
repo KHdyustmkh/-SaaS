@@ -35,4 +35,4 @@ export async function POST(req: Request) {
     // エラーメッセージをフロントエンドに詳しく返す
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}// force rebuild 1
