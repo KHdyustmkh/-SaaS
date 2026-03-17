@@ -10,8 +10,8 @@ export async function analyzeImage(base64Image: string) {
     };
   }
 
-  // モデルは最新の gemini-2.0-flash 等を指定
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  // ★修正：モデルを gemini-1.5-flash に変更（2.0は提供終了のため）
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -64,6 +64,7 @@ export async function analyzeImage(base64Image: string) {
     }
 
   } catch (error: any) {
+    console.error("AI判定エラー:", error.message);
     return { 
       product_name: "解析エラー", 
       category_hint: "その他", 
