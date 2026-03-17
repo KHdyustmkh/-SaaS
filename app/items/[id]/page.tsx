@@ -4,7 +4,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-import { analyzeImage } from '@/utils/gemini'; // ★AI判定関数のインポートを維持
+import { analyzeImage } from '@/lib/utils';
 
 export default function ItemDetailPage() {
   const params = useParams();
