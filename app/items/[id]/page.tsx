@@ -4,8 +4,6 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-// インポートパスを相対パスに修正（画像46の対策）
-import { analyzeImage } from '../../../lib/utils';
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -18,7 +16,7 @@ export default function ItemDetailPage() {
   const [isEditingPolice, setIsEditingPolice] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
-  // プレビュー表示用ステート
+  // ★画像選択・撮影時の即時プレビュー用
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [editPoliceDate, setEditPoliceDate] = useState('');
@@ -36,15 +34,16 @@ export default function ItemDetailPage() {
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // 写真選択・撮影時の即時プレビュー（復元）
+  // ★ファイル選択・撮影時に即座にプレビューを表示する
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
+    setActivePhotoIndex(-1); 
   };
 
-  // AI診断：Base64抽出手順と型エラー回避（画像44の対策）
+  // ★画像48番の404エラーを解消するためのAPI呼び出し
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -58,12 +57,19 @@ export default function ItemDetailPage() {
         if (!result) return;
         
         const base64data = result.split(',')[1];
-        const aiResult = await analyzeImage(base64data);
-        
-        if (!aiResult) return;
 
-        // ブラケット記法で型エラーを物理的に回避
-        const res = aiResult as any;
+        // 画像48の原因：存在しないエンドポイントを叩かないよう、
+        // プロジェクト内の標準パス '/api/analyze' を指定
+        const aiResponse = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64data }),
+        });
+
+        if (!aiResponse.ok) throw new Error(`APIエラー: ${aiResponse.status}`);
+        
+        const res = await aiResponse.json();
+        
         const { error } = await supabase.from('lost_items').update({
           name: res["product_name"] || item.name,
           category: res["category_hint"] || item.category,
@@ -226,7 +232,7 @@ export default function ItemDetailPage() {
             </div>
             
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
-               <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} style={{ color: 'white' }} />
+               <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} style={{ color: 'white', cursor: 'pointer' }} />
             </div>
 
             {allPhotos.length > 1 && (
