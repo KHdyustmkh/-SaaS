@@ -40,7 +40,6 @@ export default function ItemDetailPage() {
     setActivePhotoIndex(-1); 
   };
 
-  // ★画像48/49の404エラーを解消する唯一の確実な方法
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -52,10 +51,8 @@ export default function ItemDetailPage() {
       reader.onloadend = async () => {
         const result = reader.result as string;
         if (!result) return;
-        
         const base64data = result.split(',')[1];
 
-        // 対策：外部APIではなく、自分のサーバーのAPIを叩く
         const aiResponse = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -182,12 +179,10 @@ export default function ItemDetailPage() {
     const fetchItem = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
-
       const [itemRes, profileRes] = await Promise.all([
         supabase.from('lost_items').select('*').eq('id', id).single(),
         supabase.schema('public').from('profiles').select('*').eq('id', user.id).maybeSingle()
       ]);
-
       if (itemRes.error || !itemRes.data) {
         router.push('/');
       } else {
@@ -195,7 +190,6 @@ export default function ItemDetailPage() {
         setEditPoliceDate(itemRes.data.reported_to_police_at ? itemRes.data.reported_to_police_at.split('T')[0] : '');
         setEditPoliceNumber(itemRes.data.police_receipt_number || '');
       }
-
       if (!profileRes.error) {
         setProfile(profileRes.data);
       }
@@ -229,11 +223,9 @@ export default function ItemDetailPage() {
                 <div style={{ color: '#555' }}>画像なし</div>
               )}
             </div>
-            
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
                <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} style={{ color: 'white', cursor: 'pointer' }} />
             </div>
-
             {allPhotos.length > 1 && (
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                 {allPhotos.map((url, index) => (
@@ -267,7 +259,6 @@ export default function ItemDetailPage() {
               <section>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
-
                 <div style={{ marginTop: '32px', padding: '24px', backgroundColor: '#f0f7ff', borderRadius: '16px', border: '1px solid #cce5ff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <label style={{ color: '#007aff', fontSize: '0.9rem', fontWeight: 'bold' }}>🚔 警察届出情報</label>
@@ -275,7 +266,6 @@ export default function ItemDetailPage() {
                       <button onClick={() => setIsEditingPolice(true)} style={{ color: '#007aff', fontSize: '0.8rem', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>編集</button>
                     )}
                   </div>
-
                   {isEditingPolice ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                       <input type="date" value={editPoliceDate} onChange={(e) => setEditPoliceDate(e.target.value)} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ccc' }} />
@@ -288,7 +278,6 @@ export default function ItemDetailPage() {
                       <div style={{ fontSize: '0.9rem' }}>受理番号: {item.police_receipt_number || '未登録'}</div>
                     </div>
                   )}
-
                   {itemDataForPdf && (
                     <PoliceReportGenerator 
                       itemData={itemDataForPdf} 
@@ -297,7 +286,6 @@ export default function ItemDetailPage() {
                   )}
                 </div>
               </section>
-
               <section>
                 <label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>詳細説明</label>
                 <div style={{ backgroundColor: '#f5f5f7', padding: '20px', borderRadius: '14px', minHeight: '120px', color: '#1d1d1f', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
