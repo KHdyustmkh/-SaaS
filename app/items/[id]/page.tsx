@@ -4,7 +4,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-import { analyzeImage } from '@/lib/utils';
+// インポートパスを相対パスに変更してエラーを解消
+import { analyzeImage } from '../../../lib/utils';
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -32,7 +33,6 @@ export default function ItemDetailPage() {
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // ★AI診断実行ロジック（UIと連動させるために必須）
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -45,14 +45,25 @@ export default function ItemDetailPage() {
         const base64data = (reader.result as string).split(',')[1];
         const aiResult = await analyzeImage(base64data);
         
+        if (!aiResult) return;
+
+        // 【ビルドエラー解消】ブラケット記法でプロパティにアクセス
+        const res = aiResult as any;
         const { error } = await supabase.from('lost_items').update({
-          name: aiResult.product_name,
-          category: aiResult.category_hint,
-          description: aiResult.description
+          name: res["product_name"] || item.name,
+          category: res["category_hint"] || item.category,
+          description: res["description"] || item.description
         }).eq('id', id);
 
         if (error) throw error;
-        setItem((prev: any) => ({ ...prev, ...aiResult }));
+        
+        setItem((prev: any) => ({ 
+          ...prev, 
+          name: res["product_name"] || prev.name,
+          category: res["category_hint"] || prev.category,
+          description: res["description"] || prev.description
+        }));
+        
         alert('AIによる再判定が完了しました。');
       };
     } catch (error: any) {
@@ -152,7 +163,6 @@ export default function ItemDetailPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      // ★エラー解消の核心部分: スキーマ指定とmaybeSingle（ここ以外のデータ取得ロジックは変えていません）
       const [itemRes, profileRes] = await Promise.all([
         supabase.from('lost_items').select('*').eq('id', id).single(),
         supabase.schema('public').from('profiles').select('*').eq('id', user.id).maybeSingle()
@@ -183,14 +193,12 @@ export default function ItemDetailPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
           <button onClick={() => router.push('/')} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#e5e5e7', borderRadius: '10px', fontWeight: 'bold' }}>← 戻る</button>
           <div style={{ display: 'flex', gap: '10px' }}>
-            {/* ★AI再判定ボタンを元の位置に確実に維持 */}
             <button onClick={handleAIAnalysis} disabled={updating} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#5856d6', color: 'white', borderRadius: '10px', fontWeight: 'bold' }}>✨ AI再判定</button>
             <button onClick={handleDelete} disabled={updating} style={{ padding: '10px 24px', cursor: 'pointer', border: 'none', backgroundColor: '#ff3b30', color: 'white', borderRadius: '10px', fontWeight: 'bold' }}>🗑️ 削除</button>
           </div>
         </div>
 
         <div style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
-          {/* 写真表示セクション（不変） */}
           <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', padding: '20px' }}>
             <div style={{ width: '100%', height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
               {allPhotos.length > 0 ? <img src={allPhotos[activePhotoIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <div style={{ color: '#555' }}>画像なし</div>}
@@ -207,7 +215,6 @@ export default function ItemDetailPage() {
           </div>
 
           <div style={{ padding: '40px' }}>
-            {/* タイトル・ステータス（不変） */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
                 <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: '0 0 8px 0', color: '#1d1d1f' }}>{item.name}</h1>
@@ -230,7 +237,6 @@ export default function ItemDetailPage() {
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
 
-                {/* 警察届出 & PDF生成セクション（実務的な整理のみ） */}
                 <div style={{ marginTop: '32px', padding: '24px', backgroundColor: '#f0f7ff', borderRadius: '16px', border: '1px solid #cce5ff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <label style={{ color: '#007aff', fontSize: '0.9rem', fontWeight: 'bold' }}>🚔 警察届出情報</label>
