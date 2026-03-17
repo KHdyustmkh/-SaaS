@@ -40,6 +40,9 @@ export default function ItemDetailPage() {
     setActivePhotoIndex(-1); 
   };
 
+  // ---------------------------------------------------------
+  // AI判定ロジック：画像48の404を回避するために /api/analyze を叩く
+  // ---------------------------------------------------------
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -53,6 +56,7 @@ export default function ItemDetailPage() {
         if (!result) return;
         const base64data = result.split(',')[1];
 
+        // 手順1で作成した窓口を呼び出す
         const aiResponse = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -66,6 +70,7 @@ export default function ItemDetailPage() {
         
         const res = await aiResponse.json();
         
+        // Supabaseへの保存
         const { error } = await supabase.from('lost_items').update({
           name: res["product_name"] || item.name,
           category: res["category_hint"] || item.category,
@@ -74,6 +79,7 @@ export default function ItemDetailPage() {
 
         if (error) throw error;
         
+        // 画面の表示を更新
         setItem((prev: any) => ({ 
           ...prev, 
           name: res["product_name"] || prev.name,
@@ -212,6 +218,7 @@ export default function ItemDetailPage() {
           </div>
         </div>
 
+        {/* --- 画像・プレビューUI (全維持) --- */}
         <div style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', padding: '20px' }}>
             <div style={{ width: '100%', height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
@@ -238,6 +245,7 @@ export default function ItemDetailPage() {
           </div>
 
           <div style={{ padding: '40px' }}>
+            {/* --- ステータス・基本情報 (全維持) --- */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
                 <h1 style={{ fontSize: '2rem', fontWeight: '800', margin: '0 0 8px 0', color: '#1d1d1f' }}>{item.name}</h1>
@@ -259,6 +267,8 @@ export default function ItemDetailPage() {
               <section>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
+                
+                {/* --- 警察連携UI (全維持) --- */}
                 <div style={{ marginTop: '32px', padding: '24px', backgroundColor: '#f0f7ff', borderRadius: '16px', border: '1px solid #cce5ff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <label style={{ color: '#007aff', fontSize: '0.9rem', fontWeight: 'bold' }}>🚔 警察届出情報</label>
@@ -278,14 +288,10 @@ export default function ItemDetailPage() {
                       <div style={{ fontSize: '0.9rem' }}>受理番号: {item.police_receipt_number || '未登録'}</div>
                     </div>
                   )}
-                  {itemDataForPdf && (
-                    <PoliceReportGenerator 
-                      itemData={itemDataForPdf} 
-                      profileData={profile} 
-                    />
-                  )}
+                  {itemDataForPdf && <PoliceReportGenerator itemData={itemDataForPdf} profileData={profile} />}
                 </div>
               </section>
+
               <section>
                 <label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>詳細説明</label>
                 <div style={{ backgroundColor: '#f5f5f7', padding: '20px', borderRadius: '14px', minHeight: '120px', color: '#1d1d1f', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
