@@ -3,9 +3,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-// ★修正箇所：analyzeImage の呼び出し先を、修正した lib/vision に変更
-import { analyzeImage } from '../../../lib/vision';
-import { convertToBase64 } from '../../../lib/utils';
+// ★修正箇所：読み込み先を修正済みの utils に一本化。他は一切変更なし。
+import { analyzeImage, convertToBase64 } from '../../../lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
 
@@ -94,7 +93,7 @@ export default function NewItemPage() {
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
-      // ここで lib/vision 側の analyzeImage が呼び出されるようになります
+      // ここで lib/utils 側の 安定版(v1) analyzeImage が確実に呼び出されます
       const aiResult = await analyzeImage(base64); 
       
       const { data: { user } } = await supabase.auth.getUser();
@@ -187,7 +186,7 @@ export default function NewItemPage() {
           <h1 style={{ fontSize: '1.5rem', margin: 0 }}>拾得物 新規登録</h1>
           <button type="button" onClick={() => router.push('/')} style={{ padding: '8px 16px', backgroundColor: '#e5e5e7', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>キャンセル</button>
         </div>
-        {errorMsg && <div style={{ backgroundColor: '#fff1f0', color: '#f5222d', padding: '10px', borderRadius: '6px', marginBottom: '20px' }}>{errorMsg}</div>}
+        {errorMsg && <div style={{ backgroundColor: '#fff1f0', color: '#f5222d', padding: '10px', borderRadius: '#6px', marginBottom: '20px' }}>{errorMsg}</div>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>管理番号 *</label><input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
