@@ -63,13 +63,13 @@ export default function ItemDetailPage() {
         const base64data = base64result.split(',')[1];
 
        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: "v1beta" });
+        // 最もシンプルで安定した呼び出し形式に変更
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         
-        // 厳格な型定義でプロンプトを固定
         const currentPrompt = "この画像の拾得物を分析し、以下のJSON形式で返してください： { \"product_name\": \"品名\", \"category_hint\": \"カテゴリー\", \"description\": \"詳細説明\" }";
 
         const aiResult = await model.generateContent([
-          { text: currentPrompt },
+          currentPrompt,
           { inlineData: { data: base64data, mimeType: "image/jpeg" } },
         ]);
 
