@@ -6,14 +6,24 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * 拾得物管理システム：自己修復型AIエージェント
- * 特徴：接続エラー時に「使えるモデル」を自動探索し、自己解決する
+ * 警察提出用の4桁シリアル番号を生成（例: 令和8年-1234）
+ */
+const generatePoliceId = () => {
+  const now = new Date();
+  const year = now.getFullYear(); 
+  const randomId = Math.floor(Math.random() * 9999) + 1;
+  const formattedId = String(randomId).padStart(4, '0');
+  // ユーザーの意図（令和表示）を100%反映
+  return `令和${year - 2018}年-${formattedId}`;
+};
+
+/**
+ * AI拾得物管理官（自己修復・属性抽出・警察ID搭載）
  */
 export async function analyzeImage(base64Image: string) {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) throw new Error("APIキー未設定");
 
-  // 1. 最初のアタック（今の正解を試す）
   let targetModel = "gemini-flash-latest";
   
   const getPayload = (modelName: string) => ({
@@ -21,7 +31,7 @@ export async function analyzeImage(base64Image: string) {
     body: {
       contents: [{
         parts: [
-          { text: "あなたは施設遺失物センターの熟練管理官です。画像から拾得物を特定し、1. 名前：、2. カテゴリー：、3. 特徴：(30文字以内) の形式で出力してください。" },
+          { text: "あなたは施設遺失物センターの熟練管理官です。画像から拾得物を特定し、以下の形式で出力してください。1. 名前：物体名、2. カテゴリー：分類、3. 特徴：30文字以内で外観や状態を簡潔に。余計な挨拶は不要です。" },
           { inline_data: { mime_type: "image/jpeg", data: base64Image } }
         ]
       }]
@@ -30,35 +40,16 @@ export async function analyzeImage(base64Image: string) {
 
   try {
     let config = getPayload(targetModel);
-    let response = await fetch(config.url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config.body)
-    });
+    let response = await fetch(config.url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(config.body) });
 
-    // 2. もし404エラー（モデル不在）が出たら「自動探索」モードへ
+    // 自動修復（404時）
     if (response.status === 404) {
-      console.warn("モデルが見つかりません。自動探索を開始します...");
-      
-      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-      const listRes = await fetch(listUrl);
+      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
       const listData = await listRes.json();
-      
-      // リストの中から「generateContent」が使えて、かつ「flash」という名前を含むものを自動抽出
-      const autoModel = listData.models?.find((m: any) => 
-        m.supportedGenerationMethods.includes("generateContent") && 
-        m.name.includes("flash")
-      );
-
+      const autoModel = listData.models?.find((m: any) => m.supportedGenerationMethods.includes("generateContent") && m.name.includes("flash"));
       if (autoModel) {
-        const newModelName = autoModel.name.split('/').pop();
-        console.log(`新モデル発見: ${newModelName}。再試行します。`);
-        config = getPayload(newModelName);
-        response = await fetch(config.url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(config.body)
-        });
+        config = getPayload(autoModel.name.split('/').pop());
+        response = await fetch(config.url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(config.body) });
       }
     }
 
@@ -66,14 +57,23 @@ export async function analyzeImage(base64Image: string) {
     if (!response.ok) throw new Error(data.error?.message || "通信失敗");
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const nameMatch = text.match(/名前[:：]\s*(.*)/);
+    const categoryMatch = text.match(/カテゴリー[:：]\s*(.*)/);
+    const featureMatch = text.match(/特徴[:：]\s*(.*)/);
+
+    // 【重要】ここでIDを生成
+    const police_id = generatePoliceId();
+
+    // 全データを一つの塊にして戻す
     return {
-      product_name: text.match(/名前[:：]\s*(.*)/)?.[1] || "特定不能",
-      category_hint: text.match(/カテゴリー[:：]\s*(.*)/)?.[1] || "一般",
-      description: text.match(/特徴[:：]\s*(.*)/)?.[1] || text
+      product_name: nameMatch ? nameMatch[1].trim() : "特定不能",
+      category_hint: categoryMatch ? categoryMatch[1].trim() : "一般",
+      description: featureMatch ? featureMatch[1].trim() : text.substring(0, 30),
+      police_id: police_id // ←これが画面に届くべきデータ
     };
 
   } catch (e: any) {
-    throw new Error(`システム自動修復失敗: ${e.message}`);
+    throw new Error(`分析失敗: ${e.message}`);
   }
 }
 
