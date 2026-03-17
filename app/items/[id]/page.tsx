@@ -4,7 +4,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-import { GoogleGenerativeAI } from "@google/generative-ai"; 
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -41,13 +41,13 @@ export default function ItemDetailPage() {
     setActivePhotoIndex(-1); 
   };
 
-  // 【復旧】AI判定のみを以前の「動いていた成功コード」へ差し戻し
+  // AI判定とデータベース保存の直接実行
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY; 
     if (!apiKey) {
-      alert("APIキー(NEXT_PUBLIC_GEMINI_API_KEY)が見つかりません。");
+      alert("APIキーが見つかりません。Vercelの設定を確認してください。");
       return;
     }
 
@@ -56,13 +56,12 @@ export default function ItemDetailPage() {
       const response = await fetch(item.photo_url);
       const blob = await response.blob();
       const reader = new FileReader();
+      
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
-        const result = reader.result as string;
-        if (!result) return;
-        const base64data = result.split(',')[1];
+        const base64result = reader.result as string;
+        const base64data = base64result.split(',')[1];
 
-        // 404の原因だったfetchを取り払い、ブラウザ直接実行へ戻す
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const prompt = "この画像の拾得物を分析し、以下のJSON形式で返してください： { \"product_name\": \"品名\", \"category_hint\": \"カテゴリー\", \"description\": \"詳細説明\" }";
@@ -76,6 +75,7 @@ export default function ItemDetailPage() {
         const jsonStr = text.replace(/```json|```/g, "").trim();
         const res = JSON.parse(jsonStr);
         
+        // データベースに「カテゴリー(category)」を含めて保存
         const { error } = await supabase.from('lost_items').update({
           name: res["product_name"] || item.name,
           category: res["category_hint"] || item.category,
@@ -91,7 +91,7 @@ export default function ItemDetailPage() {
           description: res["description"] || prev.description
         }));
         
-        alert('AIによる再判定が完了しました。');
+        alert('AI再判定と大分類の保存が完了しました。');
       };
     } catch (error: any) {
       alert('AI判定失敗: ' + error.message);
@@ -233,9 +233,6 @@ export default function ItemDetailPage() {
                 <div style={{ color: '#555' }}>画像なし</div>
               )}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
-               <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} style={{ color: 'white', cursor: 'pointer' }} />
-            </div>
             {allPhotos.length > 1 && (
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                 {allPhotos.map((url, index) => (
@@ -268,7 +265,7 @@ export default function ItemDetailPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px' }}>
               <section>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
-                <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
+                <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー（大分類）</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
                 <div style={{ marginTop: '32px', padding: '24px', backgroundColor: '#f0f7ff', borderRadius: '16px', border: '1px solid #cce5ff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <label style={{ color: '#007aff', fontSize: '0.9rem', fontWeight: 'bold' }}>🚔 警察届出情報</label>
