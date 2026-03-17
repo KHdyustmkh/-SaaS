@@ -4,7 +4,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-import { analyzeImage } from '@/lib/utils';
+// インポートパスを相対パスに修正（画像46の対策）
+import { analyzeImage } from '../../../lib/utils';
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -17,7 +18,7 @@ export default function ItemDetailPage() {
   const [isEditingPolice, setIsEditingPolice] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
-  // プレビュー表示用のステート
+  // プレビュー表示用ステート
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [editPoliceDate, setEditPoliceDate] = useState('');
@@ -35,19 +36,15 @@ export default function ItemDetailPage() {
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // ★10回点検：ファイル選択・撮影時のプレビュー表示ロジック
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 写真選択・撮影時の即時プレビュー（復元）
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // 選択されたファイルを即座に画面に表示する
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
-
-    // 以降、必要に応じてアップロード処理を継続...
   };
 
-  // ★AI診断実行ロジック（動作パターン完全固定）
+  // AI診断：Base64抽出手順と型エラー回避（画像44の対策）
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -65,6 +62,7 @@ export default function ItemDetailPage() {
         
         if (!aiResult) return;
 
+        // ブラケット記法で型エラーを物理的に回避
         const res = aiResult as any;
         const { error } = await supabase.from('lost_items').update({
           name: res["product_name"] || item.name,
@@ -201,7 +199,7 @@ export default function ItemDetailPage() {
     fetchItem();
   }, [id, supabase, router]);
 
-  if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>読み込み中...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>読み込み中...</div>;
   if (!item) return null;
 
   return (
@@ -218,7 +216,6 @@ export default function ItemDetailPage() {
         <div style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', padding: '20px' }}>
             <div style={{ width: '100%', height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
-              {/* ★プレビューがある場合はそれを表示、なければDBの画像を表示 */}
               {previewUrl ? (
                 <img src={previewUrl} alt="プレビュー" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
               ) : allPhotos.length > 0 ? (
