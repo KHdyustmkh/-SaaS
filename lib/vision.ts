@@ -10,7 +10,7 @@ export async function analyzeImage(base64Image: string) {
     };
   }
 
-  // ★修正：モデルを gemini-1.5-flash に変更（2.0は提供終了のため）
+  // ★修正箇所：404エラーを回避するため、モデル名の指定を "gemini-1.5-flash" に固定
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
@@ -64,7 +64,6 @@ export async function analyzeImage(base64Image: string) {
     }
 
   } catch (error: any) {
-    console.error("AI判定エラー:", error.message);
     return { 
       product_name: "解析エラー", 
       category_hint: "その他", 

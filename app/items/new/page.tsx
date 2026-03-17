@@ -3,8 +3,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-// インポートパスを相対パスに修正（sの有無も点検済み）
-import { analyzeImage } from '../../../lib/utils';
+// ★修正箇所：analyzeImage の呼び出し先を、修正した lib/vision に変更
+import { analyzeImage } from '../../../lib/vision';
 import { convertToBase64 } from '../../../lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
@@ -94,6 +94,7 @@ export default function NewItemPage() {
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
+      // ここで lib/vision 側の analyzeImage が呼び出されるようになります
       const aiResult = await analyzeImage(base64); 
       
       const { data: { user } } = await supabase.auth.getUser();
