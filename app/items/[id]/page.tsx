@@ -4,7 +4,6 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-// 画像(46)の赤波線を解消するため、プロジェクト標準のエイリアスを使用
 import { analyzeImage } from '@/lib/utils';
 
 export default function ItemDetailPage() {
@@ -17,6 +16,9 @@ export default function ItemDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [isEditingPolice, setIsEditingPolice] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+
+  // プレビュー表示用のステート
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [editPoliceDate, setEditPoliceDate] = useState('');
   const [editPoliceNumber, setEditPoliceNumber] = useState('');
@@ -33,7 +35,19 @@ export default function ItemDetailPage() {
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // ★10回点検ポイント：Base64抽出ロジックを破壊前の成功パターンに完全固定
+  // ★10回点検：ファイル選択・撮影時のプレビュー表示ロジック
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 選択されたファイルを即座に画面に表示する
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+
+    // 以降、必要に応じてアップロード処理を継続...
+  };
+
+  // ★AI診断実行ロジック（動作パターン完全固定）
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -46,19 +60,17 @@ export default function ItemDetailPage() {
         const result = reader.result as string;
         if (!result) return;
         
-        // 正しいBase64抽出手順を維持
         const base64data = result.split(',')[1];
         const aiResult = await analyzeImage(base64data);
         
         if (!aiResult) return;
 
-        // ★10回点検ポイント：Vercelビルドエラー(44, 45)をブラケット記法で物理排除
         const res = aiResult as any;
         const { error } = await supabase.from('lost_items').update({
           name: res["product_name"] || item.name,
           category: res["category_hint"] || item.category,
           description: res["description"] || item.description
-        }).eq(id ? 'id' : '', id); // 既存構成を尊重
+        }).eq('id', id);
 
         if (error) throw error;
         
@@ -206,12 +218,24 @@ export default function ItemDetailPage() {
         <div style={{ backgroundColor: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#000', padding: '20px' }}>
             <div style={{ width: '100%', height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
-              {allPhotos.length > 0 ? <img src={allPhotos[activePhotoIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <div style={{ color: '#555' }}>画像なし</div>}
+              {/* ★プレビューがある場合はそれを表示、なければDBの画像を表示 */}
+              {previewUrl ? (
+                <img src={previewUrl} alt="プレビュー" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              ) : allPhotos.length > 0 ? (
+                <img src={allPhotos[activePhotoIndex]} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              ) : (
+                <div style={{ color: '#555' }}>画像なし</div>
+              )}
             </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
+               <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} style={{ color: 'white' }} />
+            </div>
+
             {allPhotos.length > 1 && (
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                 {allPhotos.map((url, index) => (
-                  <div key={index} onClick={() => setActivePhotoIndex(index)} style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: activePhotoIndex === index ? '2px solid #007aff' : '2px solid transparent' }}>
+                  <div key={index} onClick={() => { setActivePhotoIndex(index); setPreviewUrl(null); }} style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: activePhotoIndex === index && !previewUrl ? '2px solid #007aff' : '2px solid transparent' }}>
                     <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ))}
