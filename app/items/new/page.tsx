@@ -3,7 +3,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-import { analyzeImage, convertToBase64 } from '../../../lib/utils';
+// convertToBase64 はそのまま使用し、analyzeImage の直接呼び出しを内部APIに置き換えます
+import { convertToBase64 } from '../../../lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
 
@@ -77,14 +78,25 @@ export default function NewItemPage() {
     setImagePreviews(newPreviews);
   };
 
+  // 修正箇所: AI解析ロジックを自前APIへのフェッチに変更
   const handleAIAnalysis = async () => {
     if (imageFiles.length === 0) return;
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
-      const aiResult = await analyzeImage(base64); 
       
-      if (!aiResult) return;
+      // 【修正】lib/utils の analyzeImage を使わず、/api/analyze を叩く
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64 }),
+      });
+
+      const aiResult = await response.json();
+      
+      if (!aiResult || aiResult.error) {
+        throw new Error(aiResult.error || "解析結果が空です");
+      }
 
       const { data: { user } } = await supabase.auth.getUser();
       const currentManager = user?.user_metadata?.manager_name || '未設定';
@@ -94,14 +106,13 @@ export default function NewItemPage() {
       setDescription(aiResult.description || "");
       setManagementNumber(aiResult.police_id || "");
       
-      // 【波線対策】型を強制的にanyにして読み取る
       const resultData = aiResult as any;
       const aiType = resultData.item_type || "";
       const aiHint = resultData.category_hint || "";
       
       let matched = false;
 
-      // カテゴリー照合
+      // カテゴリー照合ロジックは維持
       outerLoop:
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
@@ -128,7 +139,7 @@ export default function NewItemPage() {
       }
     } catch (error) {
       console.error("AI解析エラー:", error);
-      alert('AIの判定に失敗しました。');
+      alert('AIの判定に失敗しました。サーバーログを確認してください。');
     } finally { 
       setIsAnalyzing(false); 
     }
