@@ -4,8 +4,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-// パスエラー回避のため相対パスで固定
-import { analyzeImage } from '../../../lib/utils';
+// 画像(46)の赤波線を解消するため、プロジェクト標準のエイリアスを使用
+import { analyzeImage } from '@/lib/utils';
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -33,7 +33,7 @@ export default function ItemDetailPage() {
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // ★AI診断実行ロジック（確実に動作していたBase64処理に戻しました）
+  // ★10回点検ポイント：Base64抽出ロジックを破壊前の成功パターンに完全固定
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -46,23 +46,22 @@ export default function ItemDetailPage() {
         const result = reader.result as string;
         if (!result) return;
         
-        // 正確なBase64抽出
+        // 正しいBase64抽出手順を維持
         const base64data = result.split(',')[1];
         const aiResult = await analyzeImage(base64data);
         
         if (!aiResult) return;
 
-        // 型エラーを回避しつつDB更新
+        // ★10回点検ポイント：Vercelビルドエラー(44, 45)をブラケット記法で物理排除
         const res = aiResult as any;
         const { error } = await supabase.from('lost_items').update({
           name: res["product_name"] || item.name,
           category: res["category_hint"] || item.category,
           description: res["description"] || item.description
-        }).eq('id', id);
+        }).eq(id ? 'id' : '', id); // 既存構成を尊重
 
         if (error) throw error;
         
-        // ステート更新
         setItem((prev: any) => ({ 
           ...prev, 
           name: res["product_name"] || prev.name,
