@@ -3,8 +3,9 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-import { analyzeImage } from '@/lib/vision';
-import { convertToBase64 } from '@/lib/utils';
+// インポートパスを相対パスに修正（sの有無も点検済み）
+import { analyzeImage } from '../../../lib/utils';
+import { convertToBase64 } from '../../../lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
 
@@ -181,7 +182,6 @@ export default function NewItemPage() {
   return (
     <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-        {/* ヘッダー・エラー表示は省略せず維持 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h1 style={{ fontSize: '1.5rem', margin: 0 }}>拾得物 新規登録</h1>
           <button type="button" onClick={() => router.push('/')} style={{ padding: '8px 16px', backgroundColor: '#e5e5e7', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>キャンセル</button>
@@ -191,7 +191,6 @@ export default function NewItemPage() {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>管理番号 *</label><input type="text" value={managementNumber} onChange={(e) => setManagementNumber(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
           
-          {/* 写真・AIボタンセクション（維持） */}
           <div style={{ padding: '15px', border: '2px dashed #ccc', borderRadius: '8px', backgroundColor: '#fafafa' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px' }}>写真</label>
             <input type="file" accept="image/*" multiple onChange={handleImageChange} style={{ marginBottom: '15px' }} />
@@ -204,7 +203,6 @@ export default function NewItemPage() {
 
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>品名 *</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
 
-          {/* カテゴリー選択 */}
           <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
             <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold', color: '#0070f3' }}>詳細カテゴリー *</label>
             <select value={mainCategory} onChange={(e) => { 
@@ -224,7 +222,6 @@ export default function NewItemPage() {
             </select>
           </div>
 
-          {/* ★追加：現金詳細入力UI (メインカテゴリーが「現金」の時のみ表示) */}
           {mainCategory === '現金' && (
             <div style={{ padding: '20px', backgroundColor: '#fff9db', borderRadius: '8px', border: '1px solid #fab005' }}>
               <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem', color: '#856404' }}>💰 現金内訳入力</h3>
