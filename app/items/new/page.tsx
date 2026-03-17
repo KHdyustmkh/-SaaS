@@ -75,7 +75,6 @@ export default function NewItemPage() {
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
-      // 通信先を新しく作ったAPI Route (/api/analyze) に変更
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,18 +89,21 @@ export default function NewItemPage() {
       setManagementNumber(`令和${new Date().getFullYear() - 2018}年-${Math.floor(Math.random() * 9000 + 1000)}`);
       
       const aiType = aiResult.item_type || "";
-      let matched = false;
+      const aiName = aiResult.product_name || "";
 
       outerLoop:
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
           for (const type of CATEGORY_TREE[main][sub]) {
-            if (aiType && (type.includes(aiType) || aiType.includes(type))) {
+            // 強化されたマッチングロジック: AI判定語句がマスターに含まれるか、その逆、または品名に含まれるかを確認
+            if (
+              (aiType && (type.includes(aiType) || aiType.includes(type))) ||
+              (aiName && (aiName.includes(type) || type.includes(aiName)))
+            ) {
               setMainCategory(main);
               setSubCategory(sub);
               setItemType(type);
               if (isAssetCategory(main)) setRightsFlags({ reward: 0, ownership: 1, disclosure: 0 });
-              matched = true;
               break outerLoop;
             }
           }
