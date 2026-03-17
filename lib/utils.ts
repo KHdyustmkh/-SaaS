@@ -5,9 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// セキュリティと安定性のため、AI判定ロジックは /api/analyze/route.ts に集約しました。
-// ここに古い analyzeImage を残すと v1beta エラーの原因になるため削除します。
-
+/**
+ * 判定ロジックは /api/analyze/route.ts へ移行しました。
+ * ここには画像変換用の関数のみを定義します。
+ */
 export const convertToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve) => {
     const reader = new FileReader();

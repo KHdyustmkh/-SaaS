@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const result = await model.generateContent([
-      "あなたは拾得物管理の専門家です。画像から品名を日本語で抽出し、以下のJSON形式で回答してください。余計な説明は不要です。 {\"product_name\": \"品名\", \"description\": \"特徴(30文字以内)\", \"police_id\": \"管理番号\"}",
+      "画像から拾得物を分析し、以下のJSON形式のみで回答してください。余計な文章は一切含めないでください。 {\"product_name\": \"品名\", \"item_type\": \"小分類\", \"description\": \"特徴(30文字以内)\"}",
       {
         inlineData: {
           data: image,
@@ -25,14 +25,13 @@ export async function POST(req: Request) {
 
     const response = await result.response;
     const text = response.text();
-    // JSON部分のみを抽出
     const jsonMatch = text.match(/\{.*\}/s);
-    if (!jsonMatch) throw new Error("AIの応答が正しくありません");
+    if (!jsonMatch) throw new Error("AIの応答形式が不正です");
     
     return NextResponse.json(JSON.parse(jsonMatch[0]));
 
   } catch (error: any) {
-    console.error("AI分析エラー:", error);
+    console.error("AI Analysis Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

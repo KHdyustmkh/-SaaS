@@ -2,10 +2,9 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import { useState, useMemo, useEffect } from 'react';
-import { convertToBase64 } from '../../../lib/utils';
+import { useState, useMemo } from 'react';
+import { convertToBase64 } from '@/lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
-import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
 
 const DENOMINATIONS = [
   { label: '10,000円', key: '10000' },
@@ -30,23 +29,18 @@ export default function NewItemPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiRawResult, setAiRawResult] = useState<any>(null);
-
   const [managementNumber, setManagementNumber] = useState('');
   const [name, setName] = useState('');
   const [foundAt, setFoundAt] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('届出未完了');
-
   const [mainCategory, setMainCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [itemType, setItemType] = useState('');
-
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [rightsFlags, setRightsFlags] = useState({ reward: 0, ownership: 0, disclosure: 0 });
-
   const [cashCounts, setCashCounts] = useState<{ [key: string]: number }>({});
   const [totalCashAmount, setTotalCashAmount] = useState<number>(0);
 
@@ -73,8 +67,7 @@ export default function NewItemPage() {
     }
     const newFiles = [...imageFiles, ...files];
     setImageFiles(newFiles);
-    const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-    setImagePreviews(newPreviews);
+    setImagePreviews(newFiles.map(file => URL.createObjectURL(file)));
   };
 
   const handleAIAnalysis = async () => {
@@ -82,8 +75,7 @@ export default function NewItemPage() {
     setIsAnalyzing(true);
     try {
       const base64 = await convertToBase64(imageFiles[0]);
-      
-      // /api/analyze 経由で判定を実行
+      // 通信先を新しく作ったAPI Route (/api/analyze) に変更
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,55 +83,34 @@ export default function NewItemPage() {
       });
 
       const aiResult = await response.json();
-      
-      if (!aiResult || aiResult.error) {
-        throw new Error(aiResult.error || "解析結果が空です");
-      }
+      if (aiResult.error) throw new Error(aiResult.error);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentManager = user?.user_metadata?.manager_name || '未設定';
-
-      setAiRawResult({ ...aiResult, image_url: imagePreviews[0], registered_by: currentManager });
       setName(aiResult.product_name || "");
       setDescription(aiResult.description || "");
-      setManagementNumber(aiResult.police_id || "");
+      setManagementNumber(`令和${new Date().getFullYear() - 2018}年-${Math.floor(Math.random() * 9000 + 1000)}`);
       
-      const resultData = aiResult as any;
-      const aiType = resultData.item_type || "";
-      const aiHint = resultData.category_hint || "";
-      
+      const aiType = aiResult.item_type || "";
       let matched = false;
 
       outerLoop:
       for (const main in CATEGORY_TREE) {
         for (const sub in CATEGORY_TREE[main]) {
           for (const type of CATEGORY_TREE[main][sub]) {
-            const isMatch = (val: string) => val && (type.includes(val) || val.includes(type));
-            
-            if (isMatch(aiType) || isMatch(aiHint)) {
+            if (aiType && (type.includes(aiType) || aiType.includes(type))) {
               setMainCategory(main);
               setSubCategory(sub);
               setItemType(type);
-              
-              if (isAssetCategory(main)) {
-                setRightsFlags({ reward: 0, ownership: 1, disclosure: 0 });
-              }
+              if (isAssetCategory(main)) setRightsFlags({ reward: 0, ownership: 1, disclosure: 0 });
               matched = true;
               break outerLoop;
             }
           }
         }
       }
-
-      if (!matched) {
-        alert(`カテゴリーを自動特定できませんでした: ${aiType || aiHint}`);
-      }
     } catch (error) {
       console.error("AI解析エラー:", error);
-      alert('AIの判定に失敗しました。');
-    } finally { 
-      setIsAnalyzing(false); 
-    }
+      alert('AI判定に失敗しました。');
+    } finally { setIsAnalyzing(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,8 +126,7 @@ export default function NewItemPage() {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('item-images').upload(filePath, file);
-        if (uploadError) throw new Error(`アップロード失敗: ${uploadError.message}`);
+        await supabase.storage.from('item-images').upload(filePath, file);
         const { data: { publicUrl } } = supabase.storage.from('item-images').getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
       }
@@ -170,25 +140,18 @@ export default function NewItemPage() {
 
       const { error: dbError } = await supabase.from('lost_items').insert([{
         management_number: managementNumber,
-        name: name,
-        status: status, 
-        found_at: new Date(foundAt).toISOString(),
+        name, status, found_at: new Date(foundAt).toISOString(),
         category: `${mainCategory} / ${subCategory} / ${itemType}`,
-        location: location,
-        description: description,
-        photo_url: uploadedUrls[0] || null,
+        location, description, photo_url: uploadedUrls[0] || null,
         face_photo_url: uploadedUrls.slice(1).join(',') || null,
         user_id: user.id,
         registered_by: user.user_metadata?.manager_name || '未設定',
         police_found_at: formatPoliceDate(foundAt),
         police_category_code: getPoliceCategoryCode(itemType),
-        location_type_code: 2, 
-        finder_type_code: 1,   
-        rights_flags: rightsFlags,
-        cash_counts: cashCounts
+        location_type_code: 2, finder_type_code: 1, rights_flags: rightsFlags, cash_counts: cashCounts
       }]);
 
-      if (dbError) throw new Error(`DB登録エラー: ${dbError.message}`);
+      if (dbError) throw dbError;
       router.push('/');
       router.refresh();
     } catch (err: any) { setErrorMsg(err.message); setLoading(false); }
@@ -220,10 +183,7 @@ export default function NewItemPage() {
 
           <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
             <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold', color: '#0070f3' }}>詳細カテゴリー *</label>
-            <select value={mainCategory} onChange={(e) => { 
-              setMainCategory(e.target.value); 
-              setRightsFlags({ reward: 0, ownership: isAssetCategory(e.target.value) ? 1 : 0, disclosure: 0 });
-            }} required style={{ width: '100%', padding: '12px', borderRadius: '6px', marginBottom: '10px' }}>
+            <select value={mainCategory} onChange={(e) => { setMainCategory(e.target.value); setRightsFlags({ reward: 0, ownership: isAssetCategory(e.target.value) ? 1 : 0, disclosure: 0 }); }} required style={{ width: '100%', padding: '12px', borderRadius: '6px', marginBottom: '10px' }}>
               <option value="">大分類を選択</option>
               {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
@@ -242,27 +202,13 @@ export default function NewItemPage() {
               <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem', color: '#856404' }}>💰 現金内訳入力</h3>
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>合計金額</label>
-                <input 
-                  type="number" 
-                  placeholder="例: 12500"
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setTotalCashAmount(val);
-                    autoEstimateCash(val);
-                  }}
-                  style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid #fab005' }}
-                />
+                <input type="number" placeholder="例: 12500" onChange={(e) => { const val = Number(e.target.value); setTotalCashAmount(val); autoEstimateCash(val); }} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid #fab005' }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {DENOMINATIONS.map(({ label, key }) => (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: '0.85rem', width: '60px' }}>{label}</span>
-                    <input 
-                      type="number" 
-                      value={cashCounts[key] || 0} 
-                      onChange={(e) => setCashCounts({ ...cashCounts, [key]: Number(e.target.value) })}
-                      style={{ width: '60px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }}
-                    />
+                    <input type="number" value={cashCounts[key] || 0} onChange={(e) => setCashCounts({ ...cashCounts, [key]: Number(e.target.value) })} style={{ width: '60px', padding: '5px', borderRadius: '4px', border: '1px solid #ddd' }} />
                     <span style={{ fontSize: '0.85rem' }}>枚</span>
                   </div>
                 ))}
