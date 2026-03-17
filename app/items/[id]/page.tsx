@@ -4,7 +4,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PoliceReportGenerator } from '@/components/PoliceReportGenerator';
-// インポートパスを相対パスに変更してエラーを解消
+// パスエラー回避のため相対パスで固定
 import { analyzeImage } from '../../../lib/utils';
 
 export default function ItemDetailPage() {
@@ -33,6 +33,7 @@ export default function ItemDetailPage() {
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
+  // ★AI診断実行ロジック（確実に動作していたBase64処理に戻しました）
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -42,12 +43,16 @@ export default function ItemDetailPage() {
       const reader = new FileReader();
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
-        const base64data = (reader.result as string).split(',')[1];
+        const result = reader.result as string;
+        if (!result) return;
+        
+        // 正確なBase64抽出
+        const base64data = result.split(',')[1];
         const aiResult = await analyzeImage(base64data);
         
         if (!aiResult) return;
 
-        // 【ビルドエラー解消】ブラケット記法でプロパティにアクセス
+        // 型エラーを回避しつつDB更新
         const res = aiResult as any;
         const { error } = await supabase.from('lost_items').update({
           name: res["product_name"] || item.name,
@@ -57,6 +62,7 @@ export default function ItemDetailPage() {
 
         if (error) throw error;
         
+        // ステート更新
         setItem((prev: any) => ({ 
           ...prev, 
           name: res["product_name"] || prev.name,
