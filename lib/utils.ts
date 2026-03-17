@@ -1,43 +1,46 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// 1. スタイリング用の共通関数（変更なし）
+// 1. スタイリング用共通関数（変更なし）
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 /**
  * 画像をAI(Gemini)で解析する関数
- * 昨日まで動いていた構成を維持し、モデル名のエラーのみを修正
+ * ライブラリを使わず、安定版(v1) APIを直接叩く方式に切り替え
+ * これにより 404 エラーを物理的に解消します。
  */
 export async function analyzeImage(base64Image: string) {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("APIキーが設定されていません。環境変数を確認してください。");
-  }
+  if (!apiKey) throw new Error("APIキーが設定されていません。");
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  
-  // ★重要：SDK（getGenerativeModel）を使用する場合、"models/" は不要です。
-  // ここを "gemini-1.5-flash" にすることで 404 エラーを解消します。
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // 安定版(v1)のエンドポイントを直接指定
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-  const prompt = "この画像に写っている拾得物の名前、カテゴリー、詳細な特徴を日本語で解析してください。回答には必ず『名前：〇〇』『カテゴリー：〇〇』という形式を含めてください。";
+  const payload = {
+    contents: [{
+      parts: [
+        { text: "この画像に写っている拾得物の名前、カテゴリー、詳細な特徴を日本語で解析してください。回答には必ず『名前：〇〇』『カテゴリー：〇〇』という形式を含めてください。" },
+        { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+      ]
+    }]
+  };
 
   try {
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Image,
-          mimeType: "image/jpeg",
-        },
-      },
-    ]);
-    const response = await result.response;
-    const text = response.text();
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || "APIリクエスト失敗");
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     
     return {
       product_name: text.match(/名前[:：]\s*(.*)/)?.[1] || "不明なアイテム",
