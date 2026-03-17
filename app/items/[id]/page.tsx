@@ -15,8 +15,6 @@ export default function ItemDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [isEditingPolice, setIsEditingPolice] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-
-  // ★画像選択・撮影時の即時プレビュー用
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [editPoliceDate, setEditPoliceDate] = useState('');
@@ -34,7 +32,6 @@ export default function ItemDetailPage() {
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // ★ファイル選択・撮影時に即座にプレビューを表示する
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -43,7 +40,7 @@ export default function ItemDetailPage() {
     setActivePhotoIndex(-1); 
   };
 
-  // ★画像48番の404エラーを解消するためのAPI呼び出し
+  // ★画像48/49の404エラーを解消する唯一の確実な方法
   const handleAIAnalysis = async () => {
     if (!item?.photo_url) return;
     setUpdating(true);
@@ -58,15 +55,17 @@ export default function ItemDetailPage() {
         
         const base64data = result.split(',')[1];
 
-        // 画像48の原因：存在しないエンドポイントを叩かないよう、
-        // プロジェクト内の標準パス '/api/analyze' を指定
+        // 対策：外部APIではなく、自分のサーバーのAPIを叩く
         const aiResponse = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64data }),
         });
 
-        if (!aiResponse.ok) throw new Error(`APIエラー: ${aiResponse.status}`);
+        if (!aiResponse.ok) {
+          const errorData = await aiResponse.json();
+          throw new Error(errorData.error || `APIエラー: ${aiResponse.status}`);
+        }
         
         const res = await aiResponse.json();
         
