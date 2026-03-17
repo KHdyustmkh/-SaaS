@@ -1,22 +1,21 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-// 1. スタイリング用共通関数（変更なし）
+// 1. スタイリング用共通関数
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 /**
  * 画像をAI(Gemini)で解析する関数
- * ライブラリを使わず、安定版(v1) APIを直接叩く方式に切り替え
- * これにより 404 エラーを物理的に解消します。
+ * 最新の安定動作が確認されている「gemini-1.5-flash-latest」エイリアスを使用
  */
 export async function analyzeImage(base64Image: string) {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) throw new Error("APIキーが設定されていません。");
 
-  // 安定版(v1)のエンドポイントを直接指定
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // 【最重要修正】404を回避するための最新エンドポイントURL
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
   const payload = {
     contents: [{
@@ -36,6 +35,8 @@ export async function analyzeImage(base64Image: string) {
 
     if (!response.ok) {
       const errorData = await response.json();
+      // エラーの詳細をコンソールに出力して追跡しやすくする
+      console.error("Gemini API Error Details:", errorData);
       throw new Error(errorData.error?.message || "APIリクエスト失敗");
     }
 
@@ -54,7 +55,7 @@ export async function analyzeImage(base64Image: string) {
 }
 
 /**
- * 画像を文字データ(Base64)に変換する関数（変更なし）
+ * 画像を文字データ(Base64)に変換する関数
  */
 export const convertToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
