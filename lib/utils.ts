@@ -21,8 +21,7 @@ export async function analyzeImage(base64Image: string) {
   const genAI = new GoogleGenerativeAI(apiKey);
   
   // ★重要：安定版モデルを指定
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash" });
   const prompt = "この画像に写っている拾得物の名前、カテゴリー、詳細な特徴を日本語で解析してください。回答には必ず『名前：〇〇』『カテゴリー：〇〇』という形式を含めてください。";
 
   try {
