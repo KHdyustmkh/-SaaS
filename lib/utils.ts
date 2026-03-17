@@ -12,12 +12,18 @@ export function cn(...inputs: ClassValue[]) {
  */
 export async function analyzeImage(base64Image: string) {
   // 環境変数からAPIキーを取得
-  const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   
-  // ★重要：利用可能な最新モデルに修正（エラー回避）
+  if (!apiKey) {
+    throw new Error("APIキーが設定されていません。環境変数を確認してください。");
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  
+  // ★重要：安定版モデルを指定
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const prompt = "この画像に写っている拾得物の名前、カテゴリー、詳細な特徴を日本語で解析してください。";
+  const prompt = "この画像に写っている拾得物の名前、カテゴリー、詳細な特徴を日本語で解析してください。回答には必ず『名前：〇〇』『カテゴリー：〇〇』という形式を含めてください。";
 
   try {
     const result = await model.generateContent([
@@ -32,15 +38,16 @@ export async function analyzeImage(base64Image: string) {
     const response = await result.response;
     const text = response.text();
     
-    // 解析結果を整理して返す（JSON形式を想定）
+    // 解析結果を整理して返す
     return {
       product_name: text.match(/名前[:：]\s*(.*)/)?.[1] || "不明なアイテム",
       category_hint: text.match(/カテゴリー[:：]\s*(.*)/)?.[1] || "一般",
       description: text
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI解析エラー:", error);
-    throw new Error("AI判定に失敗しました。APIキーまたはモデルの設定を確認してください。");
+    // エラーの詳細を表示するように変更
+    throw new Error(`AI判定失敗: ${error.message}`);
   }
 }
 
