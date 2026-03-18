@@ -1,7 +1,7 @@
 'use client'
 
 import { createBrowserClient } from '@supabase/ssr'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 
@@ -18,7 +18,7 @@ type LostItem = {
   created_at: string
 }
 
-export default function KioskPage () {
+function KioskContent () {
   const searchParams = useSearchParams()
   const initialQuery = searchParams.get('query') || ''
 
@@ -356,6 +356,14 @@ export default function KioskPage () {
         )}
       </main>
     </div>
+  )
+}
+
+export default function KioskPage () {
+  return (
+    <Suspense fallback={<div style={{ padding: '50px 0', textAlign: 'center', color: '#86868b' }}>読み込み中...</div>}>
+      <KioskContent />
+    </Suspense>
   )
 }
 
