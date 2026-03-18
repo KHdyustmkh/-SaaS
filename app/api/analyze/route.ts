@@ -27,10 +27,20 @@ export async function POST(req: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // 404を絶対に防ぐための標準モデル指定
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-    });
+    const getModelCandidates = () => {
+      const envModel = process.env.GEMINI_MODEL;
+      const base = [
+        "gemini-flash-latest",
+        "gemini-2.0-flash",
+        "gemini-2.5-flash"
+      ];
+      return envModel ? [envModel, ...base.filter(m => m !== envModel)] : base;
+    };
+
+    const isModelNotFoundError = (err: any) => {
+      const msg = String(err?.message || err);
+      return msg.includes("404") && msg.toLowerCase().includes("models/");
+    };
 
     const prompt = [
       "あなたは遺失物管理の業務補助AIです。",
@@ -39,15 +49,31 @@ export async function POST(req: Request) {
       "フォーマット例: {\"product_name\":\"品名\",\"item_type\":\"小分類\",\"description\":\"30文字程度\",\"category_hint\":\"大分類 / 中分類 / 小分類\"}"
     ].join("\n");
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType,
-        },
-      },
-    ]);
+    let lastError: any;
+    let result: any;
+    for (const modelName of getModelCandidates()) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName })
+        result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType
+            }
+          }
+        ])
+        lastError = null
+        break
+      } catch (err: any) {
+        lastError = err
+        if (!isModelNotFoundError(err)) throw err
+      }
+    }
+
+    if (!result) {
+      throw lastError || new Error("利用可能なAIモデルが見つかりませんでした")
+    }
 
     const response = await result.response;
     const responseText = response.text();

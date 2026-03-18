@@ -4,6 +4,34 @@ import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+const getModelCandidates = () => {
+  const envModel = process.env.GEMINI_MODEL
+  const base = [
+    'gemini-flash-latest',
+    'gemini-2.0-flash',
+    'gemini-2.5-flash'
+  ]
+  return envModel ? [envModel, ...base.filter(m => m !== envModel)] : base
+}
+
+const isModelNotFoundError = (err: any) => {
+  const msg = String(err?.message || err)
+  return msg.includes('404') && msg.toLowerCase().includes('models/')
+}
+
+async function generateWithFallback (prompt: string) {
+  let lastError: any
+  for (const modelName of getModelCandidates()) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName })
+      return await model.generateContent(prompt)
+    } catch (err: any) {
+      lastError = err
+      if (!isModelNotFoundError(err)) throw err
+    }
+  }
+  throw lastError || new Error('利用可能なAIモデルが見つかりませんでした')
+}
 
 export async function POST(request: Request) {
   try {
@@ -21,8 +49,6 @@ export async function POST(request: Request) {
       }
     );
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     // 1. 検索条件の抽出
     const extractionPrompt = `
       あなたは遺失物管理センターの優秀なオペレーターです。
@@ -31,7 +57,7 @@ export async function POST(request: Request) {
       ユーザー入力: "${message}"
     `;
 
-    const extractionResult = await model.generateContent(extractionPrompt);
+    const extractionResult = await generateWithFallback(extractionPrompt);
     const extractionText = extractionResult.response.text();
     const jsonMatch = extractionText.match(/\{.*\}/s);
     const filters = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
@@ -57,7 +83,7 @@ export async function POST(request: Request) {
       上記を元に、優しく丁寧な回答を作成してください。
     `;
 
-    const replyResult = await model.generateContent(replyPrompt);
+    const replyResult = await generateWithFallback(replyPrompt);
     const replyText = replyResult.response.text();
 
     return NextResponse.json({
