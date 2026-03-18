@@ -17,6 +17,7 @@ export default function ItemDetailPage() {
   const [isEditingPolice, setIsEditingPolice] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [origin, setOrigin] = useState<string>('');
 
   const [editPoliceDate, setEditPoliceDate] = useState('');
   const [editPoliceNumber, setEditPoliceNumber] = useState('');
@@ -26,6 +27,65 @@ export default function ItemDetailPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
+  const qrTargetUrl = useMemo(() => {
+    if (!origin || !item?.management_number) return ''
+    return `${origin}/kiosk?query=${encodeURIComponent(item.management_number)}`
+  }, [origin, item?.management_number])
+
+  const buildPrintLabelHtml = (params: {
+    title: string
+    qrImg: string
+    managementNumber: string
+    name: string
+    storageLocation: string
+    targetUrl: string
+  }) => {
+    const safeText = (s: any) => String(s || '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c] as string))
+
+    return `
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeText(params.title)}</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 24px; }
+      .wrap { max-width: 420px; margin: 0 auto; border: 1px solid #e5e5e7; border-radius: 14px; padding: 18px; }
+      .row { display: flex; gap: 16px; align-items: center; }
+      .meta { font-size: 12px; color: #555; line-height: 1.4; }
+      .meta b { color: #111; }
+      .qr { width: 220px; height: 220px; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e7; background: #fff; }
+      .qr img { width: 100%; height: 100%; display: block; }
+      .num { font-size: 18px; font-weight: 900; margin: 10px 0 6px; }
+      .small { font-size: 11px; color: #666; word-break: break-all; }
+      @media print { body { padding: 0; } .wrap { border: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="row">
+        <div class="qr"><img src="${safeText(params.qrImg)}" alt="QR" /></div>
+        <div class="meta">
+          <div class="num">#${safeText(params.managementNumber)}</div>
+          <div><b>品名</b>: ${safeText(params.name)}</div>
+          <div><b>保管</b>: ${safeText(params.storageLocation)}</div>
+          <div class="small">${safeText(params.targetUrl)}</div>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.onload = () => { window.focus(); window.print(); }
+    </script>
+  </body>
+</html>
+`
+  }
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '未登録';
@@ -266,7 +326,48 @@ export default function ItemDetailPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px' }}>
               <section>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>拾得場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.location}</div></div>
+                <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>保管場所</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.storage_location || '未設定'}</div></div>
                 <div style={{ marginBottom: '24px' }}><label style={{ color: '#86868b', fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>カテゴリー（大分類）</label><div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{item.category}</div></div>
+                <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f5f5f7', borderRadius: '16px', border: '1px solid #e5e5e7' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <div style={{ fontWeight: '800', color: '#1d1d1f' }}>🏷️ QRラベル</div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!qrTargetUrl) return
+                        const w = window.open('', '_blank')
+                        if (!w) return
+                        const title = `拾得物ラベル ${item.management_number}`
+                        const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrTargetUrl)}`
+                        w.document.open()
+                        w.document.write(buildPrintLabelHtml({
+                          title,
+                          qrImg,
+                          managementNumber: item.management_number,
+                          name: item.name,
+                          storageLocation: item.storage_location || '未設定',
+                          targetUrl: qrTargetUrl
+                        }))
+                        w.document.close()
+                      }}
+                      style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid #d2d2d7', backgroundColor: 'white', cursor: 'pointer', fontWeight: '800' }}
+                    >
+                      印刷
+                    </button>
+                  </div>
+                  {qrTargetUrl ? (
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                      <div style={{ width: '120px', height: '120px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e5e7', backgroundColor: 'white' }}>
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrTargetUrl)}`} alt="QR" style={{ width: '100%', height: '100%', display: 'block' }} />
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#555', wordBreak: 'break-all' }}>
+                        {qrTargetUrl}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.85rem', color: '#86868b' }}>QRを生成できません（管理番号が未設定）。</div>
+                  )}
+                </div>
                 <div style={{ marginTop: '32px', padding: '24px', backgroundColor: '#f0f7ff', borderRadius: '16px', border: '1px solid #cce5ff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <label style={{ color: '#007aff', fontSize: '0.9rem', fontWeight: 'bold' }}>🚔 警察届出情報</label>

@@ -2,9 +2,10 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { convertToBase64 } from '@/lib/utils';
 import { CATEGORY_TREE, getPoliceCategoryCode, isAssetCategory } from '@/lib/categories';
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 
 const DENOMINATIONS = [
   { label: '10,000円', key: '10000' },
@@ -26,6 +27,7 @@ export default function NewItemPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  const isMobile = useIsMobile()
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -33,6 +35,7 @@ export default function NewItemPage() {
   const [name, setName] = useState('');
   const [foundAt, setFoundAt] = useState('');
   const [location, setLocation] = useState('');
+  const [storageLocation, setStorageLocation] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('届出未完了');
   const [mainCategory, setMainCategory] = useState('');
@@ -69,6 +72,12 @@ export default function NewItemPage() {
     setImageFiles(newFiles);
     setImagePreviews(newFiles.map(file => URL.createObjectURL(file)));
   };
+
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [imagePreviews]);
 
   const handleAIAnalysis = async () => {
     if (imageFiles.length === 0) return;
@@ -140,18 +149,37 @@ export default function NewItemPage() {
         return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
       };
 
-      const { error: dbError } = await supabase.from('lost_items').insert([{
+      const basePayload: any = {
         management_number: managementNumber,
         name, status, found_at: new Date(foundAt).toISOString(),
         category: `${mainCategory} / ${subCategory} / ${itemType}`,
-        location, description, photo_url: uploadedUrls[0] || null,
+        location,
+        storage_location: storageLocation || null,
+        description,
+        photo_url: uploadedUrls[0] || null,
         face_photo_url: uploadedUrls.slice(1).join(',') || null,
         user_id: user.id,
         registered_by: user.user_metadata?.manager_name || '未設定',
         police_found_at: formatPoliceDate(foundAt),
         police_category_code: getPoliceCategoryCode(itemType),
         location_type_code: 2, finder_type_code: 1, rights_flags: rightsFlags, cash_counts: cashCounts
-      }]);
+      }
+
+      const insertWithFallback = async (payload: any) => {
+        const { error } = await supabase.from('lost_items').insert([payload])
+        if (!error) return null
+
+        const msg = String((error as any)?.message || '')
+        const missingStorageLocation = msg.includes('storage_location') || msg.includes('storageLocation')
+        if (!missingStorageLocation) return error
+
+        const retryPayload = { ...payload }
+        delete retryPayload.storage_location
+        const { error: retryError } = await supabase.from('lost_items').insert([retryPayload])
+        return retryError || null
+      }
+
+      const dbError = await insertWithFallback(basePayload)
 
       if (dbError) throw dbError;
       router.push('/');
@@ -174,6 +202,15 @@ export default function NewItemPage() {
           <div style={{ padding: '15px', border: '2px dashed #ccc', borderRadius: '8px', backgroundColor: '#fafafa' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px' }}>写真</label>
             <input type="file" accept="image/*" multiple onChange={handleImageChange} style={{ marginBottom: '15px' }} />
+            {imagePreviews.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px', marginBottom: '15px' }}>
+                {imagePreviews.map((src, idx) => (
+                  <div key={src} style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e5e5e7', backgroundColor: 'white' }}>
+                    <img src={src} alt={`選択写真 ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  </div>
+                ))}
+              </div>
+            )}
             {imageFiles.length > 0 && (
               <button type="button" onClick={handleAIAnalysis} disabled={isAnalyzing} style={{ width: '100%', padding: '12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>
                 {isAnalyzing ? '🔄 AI解析中...' : '✨ AI判定'}
@@ -220,6 +257,7 @@ export default function NewItemPage() {
 
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>拾得日時 *</label><input type="datetime-local" value={foundAt} onChange={(e) => setFoundAt(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
           <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>拾得場所 *</label><input type="text" value={location} onChange={(e) => setLocation(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
+          <div><label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>保管場所</label><input type="text" value={storageLocation} onChange={(e) => setStorageLocation(e.target.value)} placeholder="例: 事務所 棚B-2 / レジ裏 / 金庫" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} /></div>
           
           <div>
             <label style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginBottom: '5px' }}>

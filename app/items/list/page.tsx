@@ -3,12 +3,14 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 
 interface LostItem {
   id: string;
   name: string;
   category: string;
   location: string;
+  storage_location?: string;
   found_at: string;
   status: string;
   photo_url?: string;
@@ -29,19 +31,12 @@ function ListContent() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('deadline'); 
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile()
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const fetchItems = useCallback(async () => {
     const { data, error } = await supabase
@@ -186,6 +181,7 @@ function ListContent() {
                     <div style={{ fontSize: '0.65rem', color: '#007aff', fontWeight: '700' }}>{item.category}</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1d1d1f', margin: '4px 0', height: '2.4em', overflow: 'hidden' }}>{item.name}</div>
                     <div style={{ fontSize: '0.75rem', color: '#86868b' }}>#{item.management_number || '---'}</div>
+                    {item.storage_location && <div style={{ fontSize: '0.7rem', color: '#86868b', marginTop: '6px' }}>保管: {item.storage_location}</div>}
                   </div>
                 </div>
               );
